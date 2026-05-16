@@ -1,0 +1,49 @@
+{
+  "factions": [
+    {
+      "id": "destructor",
+      "name_zh": "解構者",
+      "skills": [
+        {"name": "語義解離", "wuxing": "metal", "description": "將對方詞條分裂，降低其連擊機率"},
+        {"name": "批判之眼", "wuxing": "metal", "description": "看穿對方弱點，提升下一次攻擊倍率"},
+        {"name": "否定波", "wuxing": "metal", "description": "反彈對方的增益效果"}
+      ]
+    },
+    {
+      "id": "conduit",
+      "name_zh": "引流人",
+      "skills": [
+        {"name": "共鳴引導", "wuxing": "water", "description": "將己方情感傳遞給隊友，共享增益"},
+        {"name": "情感洪流", "wuxing": "water", "description": "情感積累超過閾值時爆發大傷"},
+        {"name": "淚痕映刻", "wuxing": "water", "description": "映刻機率提升 10%"}
+      ]
+    },
+    {
+      "id": "observer",
+      "name_zh": "觀測使",
+      "skills": [
+        {"name": "全景掃描", "wuxing": "earth", "description": "顯示對手完整屬性與詞條池"},
+        {"name": "記憶錨定", "wuxing": "earth", "description": "鎖定一個場景，該場景書寫加成 +20%"},
+        {"name": "客觀記錄", "wuxing": "earth", "description": "每日紀實書寫額外產生一個詞條"}
+      ]
+    },
+    {
+      "id": "tuner",
+      "name_zh": "調律師",
+      "skills": [
+        {"name": "五行調和", "wuxing": "wood", "description": "消除己方受到的剋制減益"},
+        {"name": "創造迴路", "wuxing": "wood", "description": "連續書寫 3 天後觸發複利加成"},
+        {"name": "音律共振", "wuxing": "wood", "description": "隊友行動時有機率觸發額外詞條"}
+      ]
+    },
+    {
+      "id": "dreamweaver",
+      "name_zh": "築夢匠",
+      "skills": [
+        {"name": "夢境投影", "wuxing": "fire", "description": "創造虛假的映刻視窗迷惑對手"},
+        {"name": "激情燃燒", "wuxing": "fire", "description": "連擊數越高，傷害倍率越大"},
+        {"name": "蓬勃意志", "wuxing": "fire", "description": "HP 低於 50% 時攻擊力提升 25%"}
+      ]
+    }
+  ]
+}

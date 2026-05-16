@@ -1,0 +1,46 @@
+# Go
+/backend/bin/
+/backend/vendor/
+*.exe
+*.test
+*.out
+
+# Flutter
+/frontend/.dart_tool/
+/frontend/.flutter-plugins
+/frontend/.flutter-plugins-dependencies
+/frontend/build/
+/frontend/.packages
+/frontend/pubspec.lock
+/frontend/android/
+/frontend/ios/
+/frontend/linux/
+/frontend/macos/
+/frontend/windows/
+/frontend/web/
+
+# Database / Secrets
+*.env
+.env.*
+*.pem
+*.key
+config/secrets.yaml
+config/secrets.yml
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build artefacts
+dist/
+tmp/
