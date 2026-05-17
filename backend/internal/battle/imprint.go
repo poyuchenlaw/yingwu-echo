@@ -5,9 +5,9 @@ package battle
 type Rarity string
 
 const (
-	RarityCommon  Rarity = "common"
-	RarityRefined Rarity = "refined"
-	RarityDivine  Rarity = "divine"
+	RarityCommon    Rarity = "common"
+	RarityRare      Rarity = "rare"
+	RarityLegendary Rarity = "legendary"
 )
 
 // ImprintModifier is an additive bonus applied to imprint probability.
@@ -38,9 +38,9 @@ const (
 )
 
 var baseImprintProbability = map[Rarity]float64{
-	RarityCommon:  0.80,
-	RarityRefined: 0.50,
-	RarityDivine:  0.25,
+	RarityCommon:    0.80,
+	RarityRare:      0.50,
+	RarityLegendary: 0.25,
 }
 
 // ImprintProbability computes the final clamped imprint probability.

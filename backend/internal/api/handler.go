@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -35,13 +36,15 @@ type AnalysisResponse struct {
 
 // Handler holds dependencies for the writing API endpoints.
 type Handler struct {
+	db    *sql.DB
 	redis *redis.Client
-	// TODO: add *sql.DB or pgxpool.Pool for real persistence
 }
 
-// NewHandler creates a Handler. redisClient may be nil in tests (queue push is skipped).
-func NewHandler(redisClient *redis.Client) *Handler {
-	return &Handler{redis: redisClient}
+// NewHandler creates a Handler. db and redisClient may both be nil in tests:
+//   - nil db: GetWritingAnalysis returns the legacy in-memory stub.
+//   - nil redis: PostWriting skips the queue push (background recovery via DB).
+func NewHandler(db *sql.DB, redisClient *redis.Client) *Handler {
+	return &Handler{db: db, redis: redisClient}
 }
 
 // PostWriting handles POST /api/v1/writings.
@@ -76,19 +79,53 @@ func (h *Handler) PostWriting(c *gin.Context) {
 
 // GetWritingAnalysis handles GET /api/v1/writings/:id/analysis.
 // Polls the analysis result for the given writing ID.
+// When h.db is nil, returns the legacy in-memory stub for unit tests.
 func (h *Handler) GetWritingAnalysis(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing id"})
 		return
 	}
-	// TODO: SELECT wuxing_detected, celestial_detected, monster_name, card_quote, status
-	//       FROM player_writings WHERE id = $1
-	c.JSON(http.StatusOK, AnalysisResponse{
-		Status:            "pending_analysis",
-		WuxingDetected:    "",
-		CelestialDetected: "",
-	})
+	if h.db == nil {
+		c.JSON(http.StatusOK, AnalysisResponse{
+			Status:            "pending_analysis",
+			WuxingDetected:    "",
+			CelestialDetected: "",
+		})
+		return
+	}
+	var (
+		status            string
+		wuxingDetected    sql.NullString
+		celestialDetected sql.NullString
+		monsterName       sql.NullString
+		cardQuote         sql.NullString
+	)
+	row := h.db.QueryRowContext(c.Request.Context(),
+		`SELECT status, wuxing_detected, celestial_detected, monster_name, card_quote
+		 FROM player_writings WHERE id = $1`, id)
+	if err := row.Scan(&status, &wuxingDetected, &celestialDetected, &monsterName, &cardQuote); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "writing not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	resp := AnalysisResponse{
+		Status:            status,
+		WuxingDetected:    wuxingDetected.String,
+		CelestialDetected: celestialDetected.String,
+	}
+	if monsterName.Valid {
+		v := monsterName.String
+		resp.MonsterName = &v
+	}
+	if cardQuote.Valid {
+		v := cardQuote.String
+		resp.CardQuote = &v
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // RegisterRoutes wires the writing API endpoints to the Gin router.

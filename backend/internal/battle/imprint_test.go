@@ -13,15 +13,15 @@ func TestImprintProbability_BaseCommon(t *testing.T) {
 	}
 }
 
-func TestImprintProbability_BaseRefined(t *testing.T) {
-	got := battle.ImprintProbability(battle.RarityRefined, nil)
+func TestImprintProbability_BaseRare(t *testing.T) {
+	got := battle.ImprintProbability(battle.RarityRare, nil)
 	if got != 0.50 {
 		t.Errorf("expected 0.50, got %f", got)
 	}
 }
 
-func TestImprintProbability_BaseDivine(t *testing.T) {
-	got := battle.ImprintProbability(battle.RarityDivine, nil)
+func TestImprintProbability_BaseLegendary(t *testing.T) {
+	got := battle.ImprintProbability(battle.RarityLegendary, nil)
 	if got != 0.25 {
 		t.Errorf("expected 0.25, got %f", got)
 	}
@@ -32,7 +32,7 @@ func TestImprintProbability_FactionStack(t *testing.T) {
 		battle.ModChannelerTearImprint(),
 		battle.ModObserverMark(),
 	}
-	got := battle.ImprintProbability(battle.RarityRefined, mods)
+	got := battle.ImprintProbability(battle.RarityRare, mods)
 	// 0.50 + 0.10 + 0.15 = 0.75
 	if got != 0.75 {
 		t.Errorf("expected 0.75, got %f", got)
@@ -59,7 +59,7 @@ func TestImprintProbability_ClampMax(t *testing.T) {
 
 func TestImprintProbability_ClampMin(t *testing.T) {
 	mods := []battle.ImprintModifier{{Source: "neg", Delta: -1.0}}
-	got := battle.ImprintProbability(battle.RarityDivine, mods)
+	got := battle.ImprintProbability(battle.RarityLegendary, mods)
 	// 0.25 - 1.0 = -0.75, clamped to 0.05
 	if got != 0.05 {
 		t.Errorf("expected 0.05 (clamped), got %f", got)
@@ -74,7 +74,7 @@ func TestTryImprint_UsesRNG(t *testing.T) {
 		s, _ := battle.NewSession(a, d)
 		_ = s.Summon()
 		_ = s.OpenMirrorWindow()
-		ok, _ := s.TryImprint()
+		ok, _ := s.TryImprint(nil)
 		if ok {
 			successes++
 		}

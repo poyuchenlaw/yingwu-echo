@@ -14,7 +14,7 @@ import (
 func setupRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := api.NewHandler(nil) // nil redis: RPush is guarded in handler
+	h := api.NewHandler(nil, nil) // nil db + nil redis: stub path
 	api.RegisterRoutes(r, h)
 	return r
 }

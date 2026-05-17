@@ -61,7 +61,7 @@ func TestStateMachine_HappyPath(t *testing.T) {
 		if err := s.OpenMirrorWindow(); err != nil {
 			t.Fatal(err)
 		}
-		ok, err := s.TryImprint()
+		ok, err := s.TryImprint(nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -73,6 +73,33 @@ func TestStateMachine_HappyPath(t *testing.T) {
 		}
 	}
 	t.Fatal("imprint should eventually succeed")
+}
+
+func TestTryImprint_RareWithFactionStack(t *testing.T) {
+	successes := 0
+	for i := 0; i < 200; i++ {
+		a := newMonster(battle.WuxingMetal, 100)
+		d := newMonster(battle.WuxingWood, 100)
+		s, _ := battle.NewSession(a, d)
+		s.TargetRarity = battle.RarityRare
+		_ = s.Summon()
+		_ = s.OpenMirrorWindow()
+		mods := []battle.ImprintModifier{
+			battle.ModChannelerTearImprint(), // +0.10
+			battle.ModObserverMark(),         // +0.15
+		}
+		// base 0.50 + 0.10 + 0.15 = 0.75; 200 trials, expect ~150 successes
+		ok, err := s.TryImprint(mods)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ok {
+			successes++
+		}
+	}
+	if successes < 100 || successes > 190 {
+		t.Errorf("expected 100-190 successes in 200 trials with p=0.75, got %d", successes)
+	}
 }
 
 func TestReverseGambit(t *testing.T) {

@@ -74,6 +74,7 @@ type BattleSession struct {
 	Attacker         *Monster
 	Defender         *Monster
 	State            BattleState
+	TargetRarity     Rarity
 	ReverseTriggered bool
 	StartedAt        time.Time
 	rng              *rand.Rand
@@ -85,12 +86,13 @@ func NewSession(attacker, defender *Monster) (*BattleSession, error) {
 		return nil, errors.New("battle: attacker and defender must not be nil")
 	}
 	return &BattleSession{
-		ID:        uuid.New(),
-		Attacker:  attacker,
-		Defender:  defender,
-		State:     StateIdle,
-		StartedAt: time.Now().UTC(),
-		rng:       rand.New(rand.NewSource(time.Now().UnixNano())),
+		ID:           uuid.New(),
+		Attacker:     attacker,
+		Defender:     defender,
+		State:        StateIdle,
+		TargetRarity: RarityCommon,
+		StartedAt:    time.Now().UTC(),
+		rng:          rand.New(rand.NewSource(time.Now().UnixNano())),
 	}, nil
 }
 
@@ -135,12 +137,12 @@ func CalculateDamage(attacker, defender *Monster, baseDamage int) int {
 // TryImprint attempts permanent imprint of the defender.
 // Returns true if imprint succeeds (mirror window open + optional skill check).
 // Permanent imprint: captured monster ownership transfers; it does NOT return.
-func (s *BattleSession) TryImprint() (bool, error) {
+// modifiers may be nil; rarity is read from s.TargetRarity (defaults to RarityCommon).
+func (s *BattleSession) TryImprint(modifiers []ImprintModifier) (bool, error) {
 	if s.State != StateMirrorWindowOpen {
 		return false, errors.New("battle: imprint requires mirror window open state")
 	}
-	// TODO: caller should pass real rarity and modifiers from battle context
-	prob := ImprintProbability(RarityCommon, nil)
+	prob := ImprintProbability(s.TargetRarity, modifiers)
 	success := s.rng.Float64() < prob
 	if success {
 		s.State = StateCaptured
