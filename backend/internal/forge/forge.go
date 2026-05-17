@@ -137,6 +137,17 @@ func condStr(cond bool, a, b string) string {
 // ============================================================
 
 // Sentinel errors so callers can branch on policy (esp. legendary cap retains 80% materials).
+// LegendaryCapError wraps ErrLegendaryCapReached with the source variant_ids
+// so the caller can refund the exact materials (not random commons).
+// Returned when global_legendary_count.active_count >= 99 for the target species.
+type LegendaryCapError struct {
+	SpeciesID  uuid.UUID
+	VariantIDs []uuid.UUID
+}
+
+func (e *LegendaryCapError) Error() string { return ErrLegendaryCapReached.Error() }
+func (e *LegendaryCapError) Unwrap() error { return ErrLegendaryCapReached }
+
 var (
 	ErrLegendaryCapReached = errors.New("forge: global legendary cap (99) reached for species")
 	ErrCharsBelowRequired  = errors.New("forge: writing chars below recipe requirement")
@@ -297,7 +308,12 @@ func TryForge(
 			return uuid.Nil, fmt.Errorf("forge: read global_legendary_count: %w", err)
 		}
 		if active >= 99 {
-			return uuid.Nil, ErrLegendaryCapReached
+			// Snapshot source variants so caller can refund the exact materials.
+			variantIDs := make([]uuid.UUID, 0, len(cards))
+			for _, c := range cards {
+				variantIDs = append(variantIDs, c.VariantID)
+			}
+			return uuid.Nil, &LegendaryCapError{SpeciesID: speciesID, VariantIDs: variantIDs}
 		}
 		if _, err := exec.Exec(
 			`INSERT INTO global_legendary_count (species_id, active_count)

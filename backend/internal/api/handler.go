@@ -407,14 +407,18 @@ func (h *Handler) PostForge(c *gin.Context) {
 	if err != nil {
 		_ = tx.Rollback()
 		log.Printf("PostForge err (rolled back): %v", err)
-		if errors.Is(err, forge.ErrLegendaryCapReached) {
-			// Legendary cap is a "controlled" failure — DB state already rolled back.
-			// Per ADR §2.5, refund 80% of materials as fresh player_monsters rows.
-			refunded := h.refundForgeMaterials(c.Request.Context(), srcs, int(float64(len(srcs))*0.8+0.5))
+		var capErr *forge.LegendaryCapError
+		if errors.As(err, &capErr) {
+			// Legendary cap is a "controlled" failure — tx rolled back above.
+			// Per ADR §2.5 refund 80% of materials; v0.6+ snapshot enables
+			// returning the EXACT consumed variants instead of random commons.
+			keep := int(float64(len(capErr.VariantIDs))*0.8 + 0.5)
+			refunded := h.refundExactVariants(c.Request.Context(), capErr.VariantIDs[:keep])
 			c.JSON(http.StatusConflict, gin.H{
 				"error":             "legendary cap reached (99 active globally for that species)",
 				"refunded_card_ids": refunded,
 				"refund_pct":        80,
+				"refunded_exact":    true,
 			})
 			return
 		}
@@ -740,6 +744,24 @@ func (h *Handler) refundForgeMaterials(ctx context.Context, sourceIDs []uuid.UUI
 			`INSERT INTO player_monsters (id, player_id, variant_id, nickname)
 			 VALUES ($1, $2, $3, $4)`,
 			mid, DefaultPlayerID, variantID, "退材·forge_cap")
+		if err == nil {
+			out = append(out, mid)
+		}
+	}
+	return out
+}
+
+// refundExactVariants reinserts player_monsters rows with the exact variant_ids
+// snapshotted before TryForge deleted them (v0.6 enhancement of refundForgeMaterials).
+// Caller passes the slice already truncated to the keep-count.
+func (h *Handler) refundExactVariants(ctx context.Context, variantIDs []uuid.UUID) []string {
+	out := []string{}
+	for _, vid := range variantIDs {
+		mid := uuid.New().String()
+		_, err := h.db.ExecContext(ctx,
+			`INSERT INTO player_monsters (id, player_id, variant_id, nickname)
+			 VALUES ($1, $2, $3, $4)`,
+			mid, DefaultPlayerID, vid.String(), "退材·原 variant")
 		if err == nil {
 			out = append(out, mid)
 		}
