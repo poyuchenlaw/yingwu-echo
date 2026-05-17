@@ -1,6 +1,6 @@
 name: yingwu_echo
 description: 應物 ECHO — Soul Writing Monster Collector
-version: 0.5.1+6
+version: 0.5.3+8
 publish_to: none
 
 environment:
@@ -23,6 +23,8 @@ flutter:
   assets:
     - assets/sprites/
     - assets/portraits/
+    - assets/ui/
+    - assets/items/
     - assets/species_pinyin_map.json
     - assets/species_lore.json
     - assets/style_spec.json

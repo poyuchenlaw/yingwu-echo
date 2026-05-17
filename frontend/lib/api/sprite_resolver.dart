@@ -1,5 +1,5 @@
-// sprite_resolver.dart — map (species_zh, rarity) → asset path.
-// v0.5: only common sprites bundled. Rare/legendary fall back to common until Phase 2/3.
+// sprite_resolver.dart — (species_zh, rarity) → asset path.
+// v0.5.3: all 3 rarities bundled (75 sprites total across common/rare/legendary).
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -15,17 +15,12 @@ class SpriteResolver {
     _pinyinByName = decoded.map((k, v) => MapEntry(k, v as String));
   }
 
-  // Returns the asset path for (species_zh, rarity). Returns null if no mapping.
   String? path(String speciesZh, String rarity) {
     final pinyin = _pinyinByName?[speciesZh];
     if (pinyin == null) return null;
-    // Phase 1: rare/legendary fall back to common
-    final effective = rarity == 'common' ? 'common' : 'common';
-    return 'assets/sprites/${pinyin}_$effective.jpg';
+    final r = (rarity == 'rare' || rarity == 'legendary') ? rarity : 'common';
+    return 'assets/sprites/${pinyin}_$r.jpg';
   }
 
-  // Synchronous variant that requires preloaded data.
-  String? pathSync(String speciesZh, String rarity) {
-    return path(speciesZh, rarity);
-  }
+  String? pathSync(String speciesZh, String rarity) => path(speciesZh, rarity);
 }
