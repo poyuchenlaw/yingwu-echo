@@ -59,3 +59,33 @@ func (c *Client) BLPop(_ context.Context, _ time.Duration, _ ...string) *StringS
 func (c *Client) RPush(_ context.Context, _ string, _ ...interface{}) *IntCmd {
 	return &IntCmd{err: errStubRedisUnavailable}
 }
+
+// --- v0.5 stub extensions (allow main.go to compile) ---
+
+// StatusCmd is a stub mimic of go-redis StatusCmd.
+type StatusCmd struct{ err error }
+
+// Err returns the underlying error (always nil for stub).
+func (s *StatusCmd) Err() error { return s.err }
+
+// Result returns PONG when Err is nil, mirroring go-redis Ping semantics.
+func (s *StatusCmd) Result() (string, error) {
+	if s.err != nil {
+		return "", s.err
+	}
+	return "PONG", nil
+}
+
+// ParseURL accepts redis://host:port[/db] and returns default Options.
+// The stub does not validate the URL beyond required for compile.
+func ParseURL(_ string) (*Options, error) {
+	return &Options{Addr: "localhost:6379"}, nil
+}
+
+// Ping returns a successful StatusCmd (stub always healthy).
+func (c *Client) Ping(_ context.Context) *StatusCmd {
+	return &StatusCmd{err: nil}
+}
+
+// Close is a no-op for the stub.
+func (c *Client) Close() error { return nil }

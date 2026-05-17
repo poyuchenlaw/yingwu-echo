@@ -15,6 +15,7 @@ type AnalysisResult struct {
 	CelestialDetected string
 	CardQuote         string
 	MonsterName       string
+	ValidityScore     float64
 }
 
 // LLMClient abstracts the AI analysis backend.
@@ -33,5 +34,6 @@ func (m *MockLLMClient) Analyze(_ context.Context, _ AnalysisRequest) (AnalysisR
 		CelestialDetected: "太陽",
 		CardQuote:         "mock card quote",
 		MonsterName:       "mock monster",
+		ValidityScore:     0.5,
 	}, nil
 }
