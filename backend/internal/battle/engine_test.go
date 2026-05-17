@@ -44,29 +44,35 @@ func TestDamageMultiplier_Neutral(t *testing.T) {
 }
 
 func TestStateMachine_HappyPath(t *testing.T) {
-	a := newMonster(battle.WuxingMetal, 100)
-	d := newMonster(battle.WuxingWood, 100)
+	for i := 0; i < 100; i++ {
+		a := newMonster(battle.WuxingMetal, 100)
+		d := newMonster(battle.WuxingWood, 100)
 
-	s, err := battle.NewSession(a, d)
-	if err != nil {
-		t.Fatal(err)
+		s, err := battle.NewSession(a, d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s.State != battle.StateIdle {
+			t.Fatal("expected idle")
+		}
+		if err := s.Summon(); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.OpenMirrorWindow(); err != nil {
+			t.Fatal(err)
+		}
+		ok, err := s.TryImprint()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if ok {
+			if s.State != battle.StateCaptured {
+				t.Fatalf("expected captured, got %s", s.State)
+			}
+			return
+		}
 	}
-	if s.State != battle.StateIdle {
-		t.Fatal("expected idle")
-	}
-	if err := s.Summon(); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.OpenMirrorWindow(); err != nil {
-		t.Fatal(err)
-	}
-	ok, err := s.TryImprint()
-	if err != nil || !ok {
-		t.Fatal("imprint should succeed")
-	}
-	if s.State != battle.StateCaptured {
-		t.Fatalf("expected captured, got %s", s.State)
-	}
+	t.Fatal("imprint should eventually succeed")
 }
 
 func TestReverseGambit(t *testing.T) {

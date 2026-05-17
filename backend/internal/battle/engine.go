@@ -1,8 +1,9 @@
 // Package battle implements the 應物 ECHO battle state machine.
 //
 // State transitions:
-//   IDLE -> SUMMONED -> MIRROR_WINDOW_OPEN -> CAPTURED
-//                                          -> RETURNED_TO_OWNER
+//
+//	IDLE -> SUMMONED -> MIRROR_WINDOW_OPEN -> CAPTURED
+//	                                       -> RETURNED_TO_OWNER
 //
 // Key mechanics (v0.3 spec §三/§四):
 //   - 五行剋制 matrix: x1.35 attacker / x0.85 defender
@@ -33,11 +34,11 @@ const (
 type Wuxing string
 
 const (
-	WuxingMetal  Wuxing = "metal"
-	WuxingWood   Wuxing = "wood"
-	WuxingWater  Wuxing = "water"
-	WuxingFire   Wuxing = "fire"
-	WuxingEarth  Wuxing = "earth"
+	WuxingMetal Wuxing = "metal"
+	WuxingWood  Wuxing = "wood"
+	WuxingWater Wuxing = "water"
+	WuxingFire  Wuxing = "fire"
+	WuxingEarth Wuxing = "earth"
 )
 
 // WuxingMatrix defines the 克制 (counter) relationships.
@@ -138,9 +139,9 @@ func (s *BattleSession) TryImprint() (bool, error) {
 	if s.State != StateMirrorWindowOpen {
 		return false, errors.New("battle: imprint requires mirror window open state")
 	}
-	// TODO: apply player skill modifiers to imprint probability
-	// For now: imprint always succeeds when window is open (base game rule)
-	success := true
+	// TODO: caller should pass real rarity and modifiers from battle context
+	prob := ImprintProbability(RarityCommon, nil)
+	success := s.rng.Float64() < prob
 	if success {
 		s.State = StateCaptured
 		// Caller must write player_monsters row with imprinted_from_player_id set
