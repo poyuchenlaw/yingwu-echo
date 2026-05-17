@@ -1,0 +1,402 @@
+[
+  {
+    "id": "sw_001",
+    "content": "今天捷運超擠，整個人被夾在人群裡動彈不得。站了四十分鐘，背包一直被人撞，耳機線也被勾到快斷。我只是想好好上班，但光是通勤就已經把我榨乾了一半。到公司之前就覺得今天一定不會順，因為連通勤都這麼累。我不知道這種日子要過到什麼時候，感覺每天都在重複一樣的疲憊，像是永遠到不了終點的輸送帶。",
+    "expected_emotion": "累",
+    "expected_scene": "通勤",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.85
+  },
+  {
+    "id": "sw_002",
+    "content": "累累累，真的好累，什麼都不想說。",
+    "expected_emotion": "累",
+    "expected_scene": "通勤",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.35
+  },
+  {
+    "id": "sw_003",
+    "content": "下班了。坐在車上。累。",
+    "expected_emotion": "累",
+    "expected_scene": "通勤",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.57
+  },
+  {
+    "id": "sw_004",
+    "content": "今天開了五個小時的會，全程沒有意義，所有人都在說廢話，主管講了三遍一樣的結論還問大家有沒有問題。我坐在那裡假裝在記筆記，其實只是在數天花板的磁磚。我知道我應該有熱情，但它已經被榨乾了，找不到了。這份工作當初不是這樣的。我不知道是我變了還是它變了，只知道現在的我已經撐著空殼在運轉。",
+    "expected_emotion": "累",
+    "expected_scene": "工作",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.88
+  },
+  {
+    "id": "sw_005",
+    "content": "工作好累好累，每天都在累，不知道為什麼要這樣，累累累累累。不知道說什麼。累就對了。",
+    "expected_emotion": "累",
+    "expected_scene": "工作",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.15
+  },
+  {
+    "id": "sw_006",
+    "content": "躺在床上半小時了還沒睡著，身體是累的但腦子停不下來。今天又是一個沒有做完任何事的一天，待辦清單一樣長，甚至更長了。我想的最多的是：我到底在努力什麼？努力了這麼久，還是原地踏步。不是在否定自己，只是真的不確定方向。就這樣，明天還要繼續。",
+    "expected_emotion": "累",
+    "expected_scene": "睡前",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.82
+  },
+  {
+    "id": "sw_007",
+    "content": "睡前想說說今天。很累，但還好。明天繼續加油。",
+    "expected_emotion": "累",
+    "expected_scene": "睡前",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.6
+  },
+  {
+    "id": "sw_008",
+    "content": "一個人吃飯，點了最喜歡的拉麵，湯頭很香，但我完全感受不到快樂。就是機械式地把食物放進嘴裡，嚼，吞，重複。可能是太累了，連吃飯都像是任務。坐在角落的位子，看著對面的情侶在說話，覺得他們好遠，像是平行世界的人。吃完就走，沒有留下來的理由。",
+    "expected_emotion": "累",
+    "expected_scene": "用餐",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.86
+  },
+  {
+    "id": "sw_009",
+    "content": "吃飯中。好累。食物還可以。",
+    "expected_emotion": "累",
+    "expected_scene": "用餐",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.3
+  },
+  {
+    "id": "sw_010",
+    "content": "一個人在房間裡，沒有開燈，就這樣坐著。今天跟很多人說了很多話，全部都是表演。每一句「沒事」「還好」「挺好的」都是謊言，但沒有人想聽真相，所以繼續說謊。現在終於不用說話了，只是這份安靜不是輕鬆，是空洞的那種。我也不知道我到底想要什麼，只知道現在很累，需要一個人待著。",
+    "expected_emotion": "累",
+    "expected_scene": "獨處",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.9
+  },
+  {
+    "id": "sw_011",
+    "content": "在捷運上差點當場爆炸。前面那個人一直往後退，硬是佔了我半個身位，我往旁邊讓他又繼續退。我已經快貼上牆壁了。而且他還帶著外帶，那個氣味在密閉空間裡簡直是生化武器。我深呼吸，繼續忍。但我的眼神應該已經可以殺人了，如果他有感覺的話。",
+    "expected_emotion": "火大",
+    "expected_scene": "通勤",
+    "expected_wuxing": "火",
+    "expected_validity_score": 0.84
+  },
+  {
+    "id": "sw_012",
+    "content": "好火大！！！！就這樣！！！！",
+    "expected_emotion": "火大",
+    "expected_scene": "通勤",
+    "expected_wuxing": "火",
+    "expected_validity_score": 0.12
+  },
+  {
+    "id": "sw_013",
+    "content": "主管又在當眾糾正我，而且是用那種很輕描淡寫的語氣，好像我是蠢蛋一樣。我說的方案沒有錯，他只是不喜歡，但他不直說，用一堆迂迴的話把我否定掉。我當場沒說什麼，因為說什麼都沒用。但我回到座位上那十分鐘完全沒辦法工作，只是坐在那裡讓憤怒慢慢消化。我不是要被誇，我只是想被認真對待。",
+    "expected_emotion": "火大",
+    "expected_scene": "工作",
+    "expected_wuxing": "火",
+    "expected_validity_score": 0.87
+  },
+  {
+    "id": "sw_014",
+    "content": "火大火大火大，工作爛透了，什麼都爛，不想說了。",
+    "expected_emotion": "火大",
+    "expected_scene": "工作",
+    "expected_wuxing": "火",
+    "expected_validity_score": 0.18
+  },
+  {
+    "id": "sw_015",
+    "content": "今天跟朋友吵架的事還繞在腦子裡。我說的又沒有錯，但他用那種口氣讓我感覺我很差勁。我是不是反應太大？不對，我真的很生氣，那句話本來就不應該說。但現在快十二點了，越想越清醒，越清醒越生氣，越生氣越睡不著。惡性循環。",
+    "expected_emotion": "火大",
+    "expected_scene": "睡前",
+    "expected_wuxing": "火",
+    "expected_validity_score": 0.83
+  },
+  {
+    "id": "sw_016",
+    "content": "吃飯的時候收到那封郵件，整個飯都吃不下去了。我已經非常明確說了我的立場，對方還是來這一招。把飯菜撥了幾下就放棄了，結帳走人，今天已經不想再想這件事了。但腦子不配合，一直在轉。",
+    "expected_emotion": "火大",
+    "expected_scene": "用餐",
+    "expected_wuxing": "火",
+    "expected_validity_score": 0.78
+  },
+  {
+    "id": "sw_017",
+    "content": "關了門，一個人坐在地上。剛才真的很憤怒，不知道為什麼就爆發了。現在憤怒稍微退了一點，剩下的是一種很羞恥的感覺，還有一些說不清楚的難過。我不是一個壞人吧？我只是受不了了才說那些話。但說出口的話收不回來，這件事讓我很不舒服。我需要想清楚今天到底發生了什麼。",
+    "expected_emotion": "火大",
+    "expected_scene": "獨處",
+    "expected_wuxing": "金",
+    "expected_validity_score": 0.85
+  },
+  {
+    "id": "sw_018",
+    "content": "今天坐捷運，突然就想哭。沒有特別的原因，只是聽到耳機裡那首歌，想到了一些以前的事。在人群裡忍著，死撐著眼眶，看著車窗外的黑暗告訴自己撐過去。然後就這樣到站了，沒有人知道剛才發生什麼。這種感覺很孤單，但我也不知道能跟誰說。",
+    "expected_emotion": "想哭",
+    "expected_scene": "通勤",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.88
+  },
+  {
+    "id": "sw_019",
+    "content": "想哭，好想哭，但又不知道為什麼想哭，就是想哭。",
+    "expected_emotion": "想哭",
+    "expected_scene": "通勤",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.4
+  },
+  {
+    "id": "sw_020",
+    "content": "下午開完那個會之後，我躲進廁所哭了五分鐘。不是因為被罵，是因為我知道我真的盡力了，但還是沒有辦法達到他們要的，而且我連解釋的機會都沒有。哭完洗臉，繼續回去工作。沒有人知道。我想知道這樣的努力到底值不值得，但現在不是想這個的時候。",
+    "expected_emotion": "想哭",
+    "expected_scene": "工作",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.9
+  },
+  {
+    "id": "sw_021",
+    "content": "睡前哭了，不知道為什麼，就是一直哭，哭累了就睡了。今天很難過。",
+    "expected_emotion": "想哭",
+    "expected_scene": "睡前",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.52
+  },
+  {
+    "id": "sw_022",
+    "content": "一個人吃飯，點了媽媽以前常做的那道菜，沒想到餐廳做的口味差很多，但還是想到了小時候的事。眼眶有點熱，趕快喝了口水壓下去。一個人坐著吃，沒有說話的人，只有電視的聲音在背景響著。這種感覺說不上是難過，就是一種淡淡的缺口。",
+    "expected_emotion": "想哭",
+    "expected_scene": "用餐",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.82
+  },
+  {
+    "id": "sw_023",
+    "content": "今晚一個人，哭了很久，終於停了。說不清楚為什麼哭，可能什麼都有一點，可能什麼都沒有。就是那種積累久了之後的決堤。哭完之後有一點點輕，但也很空。我以為自己還好，但原來沒有。把這段話寫下來，不是要解決什麼，只是想讓它被記錄著，這樣它就真實存在過。",
+    "expected_emotion": "想哭",
+    "expected_scene": "獨處",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.91
+  },
+  {
+    "id": "sw_024",
+    "content": "想哭獨處獨處想哭，想哭獨處獨處想哭，想哭獨處獨處想哭，反正就是想哭，記錄一下。",
+    "expected_emotion": "想哭",
+    "expected_scene": "獨處",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.05
+  },
+  {
+    "id": "sw_025",
+    "content": "在捷運上突然想通一件事：我一直以為那段關係是我的錯，但今天不知道為什麼，從另一個角度看了一下，才發現我當時做的選擇其實是合理的。不是在自我開脫，是真的看清楚了。這件事在腦子裡卡了兩年，今天好像鬆開了一點。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "通勤",
+    "expected_wuxing": "金",
+    "expected_validity_score": 0.83
+  },
+  {
+    "id": "sw_026",
+    "content": "好像懂了一些事，說不清楚，就是懂了。在通勤的時候。挺好的。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "通勤",
+    "expected_wuxing": "金",
+    "expected_validity_score": 0.38
+  },
+  {
+    "id": "sw_027",
+    "content": "今天在寫報告的時候，突然意識到一件事：我一直在對的方向上解錯誤的問題。不是方向錯，是我誤解了問題本身。這個頓悟讓我有點震驚，但同時覺得鬆了一口氣——至少現在知道了，可以調整了。把這件事記下來，因為這種清醒感很珍貴，不想讓它消失。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "工作",
+    "expected_wuxing": "金",
+    "expected_validity_score": 0.86
+  },
+  {
+    "id": "sw_028",
+    "content": "睡前想著最近一直想不清楚的事，突然腦子裡有什麼東西喀一聲，好像拼圖最後那塊放進去了。說不定只是睡前的錯覺，但感覺很真實。我怕明天醒來就忘了，所以要趕快記下來：原來我抗拒的那件事，背後是因為我害怕失去主控感，不是真的不想做。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "睡前",
+    "expected_wuxing": "木",
+    "expected_validity_score": 0.87
+  },
+  {
+    "id": "sw_029",
+    "content": "好像懂了，睡前突然懂了，說不清楚，明天繼續想。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "睡前",
+    "expected_wuxing": "木",
+    "expected_validity_score": 0.33
+  },
+  {
+    "id": "sw_030",
+    "content": "吃著飯，朋友講了一句很普通的話，但我聽進去的那一刻覺得被說中了。她說：「你不是不知道怎麼選，你只是不敢承認你已經知道答案了。」我放下筷子想了很久。她說得對。我其實一直知道，只是一直在等一個讓我不用負責任的理由。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "用餐",
+    "expected_wuxing": "木",
+    "expected_validity_score": 0.89
+  },
+  {
+    "id": "sw_031",
+    "content": "好像懂了好像懂了好像懂了，用餐中好像懂了，就是這種感覺，好。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "用餐",
+    "expected_wuxing": "木",
+    "expected_validity_score": 0.08
+  },
+  {
+    "id": "sw_032",
+    "content": "今天一個人在家，把之前的日記翻出來看，讀到兩年前的自己，才意識到我從那個時候到現在走了多遠。那個人很焦慮，什麼都擔心，但同時也很努力。我現在還是我，但好像清晰一些了，雖然還有很多不確定的事。這件事讓我有點感動，也有點感謝當時的自己沒有放棄。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "獨處",
+    "expected_wuxing": "金",
+    "expected_validity_score": 0.88
+  },
+  {
+    "id": "sw_033",
+    "content": "今天通勤，什麼事都沒發生，就是正常的早晨。窗外的風景一格一格過去，我聽著音樂，腦子空空的，不是不好，就是平。這種感覺很難形容，因為它沒有故事。但我覺得應該記錄一下，因為「平」這件事其實不容易，我花了很長時間才能這樣安靜地坐著不焦慮。",
+    "expected_emotion": "平",
+    "expected_scene": "通勤",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.8
+  },
+  {
+    "id": "sw_034",
+    "content": "通勤。平。沒什麼。",
+    "expected_emotion": "平",
+    "expected_scene": "通勤",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.28
+  },
+  {
+    "id": "sw_035",
+    "content": "今天工作進展算順，沒有大起大落。完成了幾個待辦，回了幾封郵件，開了一個還算有建設性的會議。下班的時候感覺還好，不是特別開心，但也沒有哪裡讓我難受。這種「平」的感覺讓我想到一句話：穩定也是一種能量。我最近終於學會不把沒有高峰當成問題了。",
+    "expected_emotion": "平",
+    "expected_scene": "工作",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.79
+  },
+  {
+    "id": "sw_036",
+    "content": "工作，平，今天還好，差不多就這樣，沒什麼特別，繼續。",
+    "expected_emotion": "平",
+    "expected_scene": "工作",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.32
+  },
+  {
+    "id": "sw_037",
+    "content": "今晚睡前心裡很安靜，不是因為什麼特別好的事，只是沒有負擔。今天做了我想做的事，跟重要的人說了話，吃飽了睡夠了。沒有壯闊的感受，但就是很穩。我想記錄這種感覺，因為它比很多激動的時刻都更珍貴。",
+    "expected_emotion": "平",
+    "expected_scene": "睡前",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.82
+  },
+  {
+    "id": "sw_038",
+    "content": "睡前，心情平，快去睡了，晚安。",
+    "expected_emotion": "平",
+    "expected_scene": "睡前",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.35
+  },
+  {
+    "id": "sw_039",
+    "content": "自己煮了一鍋湯，邊喝邊看窗外的天色慢慢暗下來。沒有人一起吃飯，但不覺得孤單，就是很安靜的那種一個人。食物很暖，我也很暖，這樣就夠了。不是每一餐都需要很多人，有時候一個人慢慢吃，反而是最接近自己的時刻。",
+    "expected_emotion": "平",
+    "expected_scene": "用餐",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.83
+  },
+  {
+    "id": "sw_040",
+    "content": "吃飯，平靜，食物不錯，吃完繼續。",
+    "expected_emotion": "平",
+    "expected_scene": "用餐",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.25
+  },
+  {
+    "id": "sw_041",
+    "content": "今晚一個人，不做什麼，就是坐著。手機放在旁邊但沒有去滑，不是克制，只是不想。外面偶爾有車聲，這裡很安靜。我想了一些過去的事，沒有結論，也不需要結論。就這樣，存在著，還好。",
+    "expected_emotion": "平",
+    "expected_scene": "獨處",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.81
+  },
+  {
+    "id": "sw_042",
+    "content": "平平獨處，獨處平平，就這樣，平。",
+    "expected_emotion": "平",
+    "expected_scene": "獨處",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.1
+  },
+  {
+    "id": "sw_043",
+    "content": "今天在公車上，突然很想哭又很火大，自己都不知道該怎麼定義這個感覺。昨晚跟家人通話的事還沒消化，他們說的那些話讓我既委屈又憤怒。委屈因為我知道他們在乎我，憤怒因為他們的方式讓我窒息。兩種感覺一起在，在車上一直深呼吸，希望在到站之前把自己整理好。",
+    "expected_emotion": "想哭",
+    "expected_scene": "通勤",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.86
+  },
+  {
+    "id": "sw_044",
+    "content": "工作的時候突然懂了一些事，但同時又有點難過，因為懂了就代表以前的自己在某些地方真的走了冤枉路。不後悔，但有點心疼那個不知道的自己。這種感覺很複雜，是「好像懂了」也是「想哭」的混合體，不知道要怎麼歸類。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "工作",
+    "expected_wuxing": "金",
+    "expected_validity_score": 0.84
+  },
+  {
+    "id": "sw_045",
+    "content": "今天吃飯，一個人，吃到一半突然覺得很平靜，但說平靜也不完全對，因為心裡還是有點東西在。說不清楚，就是介於好和不好之間的狀態，像灰色的天，不是要下雨，也不是晴天。不知道今天的心情標籤要貼什麼。",
+    "expected_emotion": "平",
+    "expected_scene": "用餐",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.75
+  },
+  {
+    "id": "sw_046",
+    "content": "睡不著，很煩，也很累，也有點想哭，但哭不出來，就這樣躺著，很難形容。希望明天好一點。",
+    "expected_emotion": "累",
+    "expected_scene": "睡前",
+    "expected_wuxing": "水",
+    "expected_validity_score": 0.58
+  },
+  {
+    "id": "sw_047",
+    "content": "今天下班後一個人走回家，邊走邊想今天發生的事，覺得有些地方懂了，但還是有點孤單。懂了的事是：我不需要每件事都得到別人認可才算做對了。但懂歸懂，一個人走路還是有點安靜得有些感傷。",
+    "expected_emotion": "好像懂了",
+    "expected_scene": "獨處",
+    "expected_wuxing": "金",
+    "expected_validity_score": 0.8
+  },
+  {
+    "id": "sw_048",
+    "content": "在捷運上火大，也很累，搞不清楚自己到底是哪個，就是很不舒服。可能是累到對什麼都不耐煩了吧。",
+    "expected_emotion": "火大",
+    "expected_scene": "通勤",
+    "expected_wuxing": "火",
+    "expected_validity_score": 0.62
+  },
+  {
+    "id": "sw_049",
+    "content": "吃飯吃飯吃飯吃飯，吃飯吃飯吃飯吃飯，今天吃飯，沒什麼，就是吃飯，吃飯記錄，吃飯吃飯，完。",
+    "expected_emotion": "平",
+    "expected_scene": "用餐",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.03
+  },
+  {
+    "id": "sw_050",
+    "content": "一個人在家，想了很多，也什麼都沒想。今天是普通的一天，但普通裡面有很多細節：早上的陽光、中午泡的那杯茶、下午窗外路過的那隻貓。沒有什麼大事，但我想把這些細節記下來，因為我知道這樣的日子不會每天都有，能平靜地感受到這些，已經很好了。",
+    "expected_emotion": "平",
+    "expected_scene": "獨處",
+    "expected_wuxing": "土",
+    "expected_validity_score": 0.85
+  }
+]
