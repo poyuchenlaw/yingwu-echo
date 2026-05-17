@@ -675,7 +675,9 @@ func (h *Handler) PostBattle(c *gin.Context) {
 				capturedID = &newMID
 				capturedNick = &newNick
 			} else {
-				log.Printf("battle imprint insert failed: %v", err)
+				// INSERT failed — demote outcome so battles.state reflects reality
+				log.Printf("battle imprint insert failed (demoting to returned_to_owner): %v", err)
+				imprintSuccess = false
 			}
 		}
 	}

@@ -47,7 +47,16 @@ func NewWorker(redisClient *redis.Client, llm LLMClient, hook ForgeHook) *Worker
 }
 
 // Start launches WorkerCount goroutines.
+// Start launches the Redis-queue worker pool.
+// v0.5 NOTE: this worker's loop() reads from Redis BUT does NOT persist
+// analysis results back to the DB (worker.go:93 TODO). In the current
+// stack the third_party stub redis BLPop is a no-op so loop() never
+// receives a task, making this branch effectively inert. The active
+// production path is the handler's analyzer-fn goroutine (main.go).
+// When real Redis lands in v0.6 the loop() body must call
+// handler.UpdateWritingAnalysis before this can be re-enabled.
 func (w *Worker) Start() {
+	log.Printf("analyzer.Worker.Start: pool=%d (v0.5 inert — stub redis no-op; real path is handler goroutine)", WorkerCount)
 	for i := 0; i < WorkerCount; i++ {
 		w.wg.Add(1)
 		go w.loop()

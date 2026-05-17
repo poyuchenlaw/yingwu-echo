@@ -144,16 +144,18 @@ POST   /api/v1/battle             — 隨機 NPC 對戰 + imprint
 
 ```bash
 cd /home/simon/projects/yingwu-echo
-git log --oneline -5
-git status -s   # 本 session 未 commit，所有改動 staged-ready
-cd backend && go build ./... && go test ./... -count=1   # 應全綠
-ls migrations/  # 應見 0001~0008
-psql -d yingwu_echo_dev -c "\dt" # 應見 16 tables
+git log --oneline -6  # 應見 028b22f / e28adbc / 2c6ca34 / 433c9a2 等 4 個 v0.5 commits（已 push origin master）
+git status -s  # working tree clean
+cd backend && go build ./... && go test ./... -count=1  # 應全綠 5 packages
+ls ../migrations/  # 應見 0001~0008
+psql -d yingwu_echo_dev -c "\dt"  # 應見 16 tables
 psql -d yingwu_echo_dev -c "SELECT rarity, COUNT(*) FROM monster_variants GROUP BY rarity;"  # 100/100/100
 ```
 
-啟動（單一指令）：
+啟動（**必須先 cd backend**）：
 ```bash
+cd /home/simon/projects/yingwu-echo/backend
+# 注意：.env 用 awk 取 key 假設值內無 = 號；若 Google 改格式需改 grep 'GEMINI_API_KEY=' | head -1 | cut -d= -f2-
 GEMINI_API_KEY=$(awk -F= '/^GEMINI_API_KEY=/{print $2}' /home/simon/.claude/.env | awk '{print $1}') \
 DATABASE_URL="host=/var/run/postgresql user=simon dbname=yingwu_echo_dev sslmode=disable" \
 go run ./cmd/server
@@ -181,3 +183,28 @@ go run ./cmd/server
 - HTML demo 設計：暗色青銅美學 + wuxing 5 色徽章 + rarity 3 階梯度 + Reverse Gambit 觸發紅字 + Imprint 成功金字
 
 **下個 session 從第 6 節「開機檢查」開始，或直接攻 v0.6 第 1 條（OpenMirrorWindow faction modifiers）+ 第 3 條（forge transaction wrap）。**
+
+
+---
+
+## 8. Auditor fresh-window verdict (CONDITIONAL → addressed)
+
+2026-05-17 派 auditor 子代理 clean context window 審查，回覆 CONDITIONAL 72/100。
+3 blockers 已在 commit `<next>` 處理：
+1. ✅ §6 啟動指令補 `cd backend` 步驟
+2. ✅ PostBattle imprint INSERT 失敗時 demote imprintSuccess=false，battles.state 從 'captured' 退為 'returned_to_owner'，避免幽靈 captured 記錄
+3. ✅ worker.go Start() 補 doc + log 註明 v0.5 inert（stub redis BLPop no-op；真路徑走 handler goroutine）
+
+Auditor 5 warnings 中其 4 條留作 v0.6 工單：
+- refundForgeMaterials 退還的是隨機 common 而非原 variant — v0.6 需 snapshot pre-delete
+- forge_chars_required v0.3 legacy hardcode vs v0.4 DB recipe 數字不一 — legacy 路徑 v0.6 移除
+- GEMINI_API_KEY awk 切割假設無 `=` — 已在 handover §6 加註，後續可改 cut -d= -f2-
+- NPC monster multi-imprint：本 session 確認屬 **design intent**（無限野外怪池，allows multiple players capture same species），不是 bug。NPC inventory 不 deplete，符合「山海者持續顯化」的世界觀（哲學承繼 14）
+
+## 9. Design intent 釐清（auditor W4）
+
+**NPC monsters 無限可 imprint**：是設計取捨而非缺陷。
+- 玩家對戰勝利 + imprint roll 成功 → INSERT 玩家的 player_monsters 一張新 row（imprinted_from_player_id=NPC）
+- NPC 原 row 仍 active，下次對戰時 ORDER BY RANDOM() 可再被選為對手
+- 世界觀：山海者是「持續顯化的山海經神話投影」，不會因被收編而從世界消失
+- 防範：global_legendary_count 99 cap 限制總量（含 forge + imprint 結果）
