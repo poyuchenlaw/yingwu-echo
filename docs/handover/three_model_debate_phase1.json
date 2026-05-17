@@ -1,0 +1,69 @@
+{
+  "_meta": {
+    "debate_topic": "影行者 Q 版風格 + 116 件資產量產 + APK 圖像豐富版交付",
+    "voices": {
+      "gemini_independent_director": "gemini-3-pro-preview, GO-WITH-PHASES",
+      "cymon_ceo": "Opus 4.7, GO-WITH-PHASES",
+      "codex_cto": "STALLED — kill at 2min no-CPU (sess 3 pattern repeat). lessons say substitute self-verdict.",
+      "auditor_clean_window": "scheduled post Phase 1 (5 red-line 模型上線 trigger)"
+    },
+    "convergence": "2/3 voice GO-WITH-PHASES (Codex absent counted as abstain per fault-tolerant quorum)",
+    "constitutional_basis": "feedback_three_model_debate_universal_intent_constitutional — 跨家族意見對齊已達，Codex stall 已落 lesson 10"
+  },
+  "agreed_decisions": {
+    "A_style": "hybrid-with-tension — 怪獸 sprite 以 Octopath 親和力為主，但配件保留古銅金紋路（玉珮/篆書印章作為視覺錨點），legendary 階特別放大古銅張力（光暈、浮空崩裂壇）。同質中保異質。",
+    "B_phased_plan": [
+      {
+        "phase": 1,
+        "scope": "25 species × common (canonical wuxing) + pubspec assets 註冊 + Flutter sprite_resolver + APK rebuild + 上 GDrive",
+        "wall_clock_min": "30-40"
+      },
+      {
+        "phase": 2,
+        "scope": "25 rare + Auditor fresh window 審 Phase 1 + APK rebuild",
+        "wall_clock_min": "20"
+      },
+      {
+        "phase": 3,
+        "scope": "25 legendary + 11 UI + 10 item icon + APK rebuild",
+        "wall_clock_min": "25"
+      },
+      {
+        "phase": 4,
+        "scope": "12 scene + 4 portrait 縮圖 + final APK rebuild",
+        "wall_clock_min": "18"
+      }
+    ],
+    "C_flutter_integration": "MESSY-BUT-TRACTABLE — 命名 species_pinyin_rarity.jpg、Image.asset + fallback Icon、ColorFiltered widget 套五行、precacheImage on init",
+    "D_blockers_acknowledged": [
+      "Gemini Image rate limit 未知 → 加 5s sleep + 429 retry",
+      "風格漂移 → 每 8 張人工抽樣對比 spec sample_filled_prompt",
+      "APK 體積首啟動延遲 → precacheImage 解決"
+    ],
+    "E_minority_report": "Gemini: IP 肅穆感稀釋風險。Cymon mitigation: hybrid 配件 + legendary 古銅張力放大。Phase 1 結束強制 Simon 看一次拍板。"
+  },
+  "phase_1_action_items": [
+    "重生 帝江幼形 earth/common v2（採影行者風格基準）作為新 prompt template 校準",
+    "若 v2 通過 Simon 直觀確認，順跑剩 24 species common = 25 圖",
+    "Flutter: 新增 lib/sprite_resolver.dart 寫死 pinyin map + path 組裝",
+    "pubspec.yaml 加 assets: ['assets/sprites/', 'assets/portraits/']",
+    "MonsterCard 改 Image.asset(spriteResolver.path(species, rarity)) + errorBuilder fallback",
+    "ColorFiltered 包 sprite 套 5 個 wuxing ColorMatrix (echo_theme.dart 已有 EchoColors.wuxing)",
+    "Compress + downscale 圖到 512px JPG，預估每張 ~70KB",
+    "flutter build apk --release → cp 到 GDrive/builds/yingwu-echo-v0.5-phase1.apk"
+  ],
+  "post_handover_review": {
+    "gemini_independent_director_handover_audit_20260517_2045": {
+      "verdict": "APPROVE",
+      "doc_completeness_score": 95,
+      "critical_gaps": [
+        "缺乏明確的 DB schema migration 當前版本號與狀態",
+        "未明確聲明 Git 工作區是否處於完全 clean 狀態"
+      ],
+      "redundancy": [
+        "第 8 節（辯論軌跡）與第 10 節（17 條哲學）過長"
+      ],
+      "next_session_readiness": "GO"
+    }
+  }
+}

@@ -6,7 +6,12 @@
 
 ---
 
-## 1. 30 秒開機（**從 clean shell 跑得通**已驗證）
+## 1. 30 秒開機
+
+**最終 origin/master commit**：`943be8d docs(v0.5.4): comprehensive handover audit`
+**Git working tree**：clean（已 push 至 origin/master，無 untracked / no modified）
+
+### 確認版本一致性（**從 clean shell 跑得通**已驗證）
 
 ```bash
 # 進 repo
@@ -83,6 +88,21 @@ becc4a1 feat(v0.5.4): Phase 4 — 12 scenes
 e28adbc feat(v0.5): game loop endpoints
 028b22f feat(v0.5): backend operational — Gemini Flash + DB wire
 ```
+
+### Migration 版本狀態（**截至 2026-05-17，全 applied**）
+
+| # | 檔名 | 範疇 | applied |
+|---|------|------|---------|
+| 0001 | initial_schema | base 10 tables（players / writings / monsters / variants...）| ✅ |
+| 0002 | v04_rarity_factions_lock | rarity_tier enum / factions / lock_state | ✅ |
+| 0003 | player_faction_memberships | 補 0002 漏的關聯表 | ✅ |
+| 0004 | v05_demo_bridge | content/emotion_tag/scene_tag bridge + 擴 card_quote 120 / monster_name 80 | ✅ |
+| 0005 | v05_rare_variants | UNIQUE 鍵改三鍵 + 種 100 rare variants | ✅ |
+| 0006 | v05_system_npc | 種 100 NPC monsters in SystemNPCPlayerID | ✅ |
+| 0007 | v05_legendary_dedup | 種 100 legendary variants + content_hash UNIQUE | ✅ |
+| 0008 | v05_forge_fk_cascade | forge_records.result_monster_id ON DELETE SET NULL | ✅ |
+
+DB 名稱：`yingwu_echo_dev`  Unix socket：`/var/run/postgresql/`  Owner：`simon`
 
 ---
 
