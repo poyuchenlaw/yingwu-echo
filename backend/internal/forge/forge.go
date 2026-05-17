@@ -17,6 +17,7 @@ package forge
 
 import (
 	"database/sql"
+	"github.com/lib/pq"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -318,7 +319,7 @@ func TryForge(
 	if _, err := exec.Exec(
 		`INSERT INTO forge_records (player_id, consumed_ids, target_rarity, writing_chars, succeeded, result_monster_id)
 		 VALUES ($1, $2, $3, $4, TRUE, $5)`,
-		playerID, consumedUUIDs, string(targetRarity), charsAccumulated, newID,
+		playerID, pq.Array(consumedUUIDs), string(targetRarity), charsAccumulated, newID,
 	); err != nil {
 		return uuid.Nil, fmt.Errorf("forge: insert forge_record: %w", err)
 	}
