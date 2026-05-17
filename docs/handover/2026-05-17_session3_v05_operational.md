@@ -208,3 +208,8 @@ Auditor 5 warnings 中其 4 條留作 v0.6 工單：
 - NPC 原 row 仍 active，下次對戰時 ORDER BY RANDOM() 可再被選為對手
 - 世界觀：山海者是「持續顯化的山海經神話投影」，不會因被收編而從世界消失
 - 防範：global_legendary_count 99 cap 限制總量（含 forge + imprint 結果）
+
+
+---
+
+> **⚠️ SUPERSEDED 2026-05-17 20:30**：本檔記錄 Phase 1 結束時的中繼狀態。整個 4 階段 + final APK 完整收尾的權威接手包是 `2026-05-17_session3_v05_FINAL.md`。下個 session 直接用 FINAL，不要看本檔。
