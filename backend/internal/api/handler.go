@@ -17,6 +17,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/simonchen/yingwu-echo/backend/internal/battle"
+	"github.com/simonchen/yingwu-echo/backend/internal/faction"
 	"github.com/simonchen/yingwu-echo/backend/internal/forge"
 )
 
@@ -283,20 +284,20 @@ func (h *Handler) AcquireMonsterForWriting(ctx context.Context, playerID, emotio
 	err := h.db.QueryRowContext(ctx,
 		`SELECT v.id FROM monster_variants v
 		 JOIN monster_species s ON s.id=v.species_id
-		 WHERE s.emotion_tag=$1 AND v.wuxing_attr=$2::wuxing
+		 WHERE s.emotion_tag=$1 AND v.wuxing_attr=$2::wuxing AND v.rarity='common'
 		 ORDER BY RANDOM() LIMIT 1`,
 		emotionTag, wuxingEN).Scan(&variantID)
 	if err == sql.ErrNoRows {
 		err = h.db.QueryRowContext(ctx,
 			`SELECT v.id FROM monster_variants v
 			 JOIN monster_species s ON s.id=v.species_id
-			 WHERE s.emotion_tag=$1
+			 WHERE s.emotion_tag=$1 AND v.rarity='common'
 			 ORDER BY RANDOM() LIMIT 1`,
 			emotionTag).Scan(&variantID)
 	}
 	if err == sql.ErrNoRows {
 		err = h.db.QueryRowContext(ctx,
-			`SELECT id FROM monster_variants ORDER BY RANDOM() LIMIT 1`).Scan(&variantID)
+			`SELECT id FROM monster_variants WHERE rarity='common' ORDER BY RANDOM() LIMIT 1`).Scan(&variantID)
 	}
 	if err != nil {
 		return "", err
@@ -395,20 +396,33 @@ func (h *Handler) PostForge(c *gin.Context) {
 			`SELECT COALESCE(SUM(char_count),0) FROM player_writings WHERE player_id=$1`,
 			DefaultPlayerID).Scan(&chars)
 	}
-	newID, err := forge.TryForge(forge.WrapDB(h.db), pid, srcs, target, chars)
+	// Wrap forge in transaction (ADR-002 v2 §2.8): rollback on any failure so
+	// global_legendary_count + player_monsters + forge_records stay consistent.
+	tx, err := h.db.BeginTx(c.Request.Context(), nil)
 	if err != nil {
-		log.Printf("PostForge err: %v", err)
-		// On legendary cap: refund 80% of source cards (2 of 3) per ADR §2.5
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "begin tx: " + err.Error()})
+		return
+	}
+	newID, err := forge.TryForge(forge.WrapDB2(tx), pid, srcs, target, chars)
+	if err != nil {
+		_ = tx.Rollback()
+		log.Printf("PostForge err (rolled back): %v", err)
 		if errors.Is(err, forge.ErrLegendaryCapReached) {
+			// Legendary cap is a "controlled" failure — DB state already rolled back.
+			// Per ADR §2.5, refund 80% of materials as fresh player_monsters rows.
 			refunded := h.refundForgeMaterials(c.Request.Context(), srcs, int(float64(len(srcs))*0.8+0.5))
 			c.JSON(http.StatusConflict, gin.H{
-				"error":              "legendary cap reached (99 active globally for that species)",
-				"refunded_card_ids":  refunded,
-				"refund_pct":         80,
+				"error":             "legendary cap reached (99 active globally for that species)",
+				"refunded_card_ids": refunded,
+				"refund_pct":        80,
 			})
 			return
 		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit: " + err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -644,8 +658,10 @@ func (h *Handler) PostBattle(c *gin.Context) {
 
 	if mirrorOpened {
 		imprintAttempted = true
-		imprintProb = battle.ImprintProbability(session.TargetRarity, nil)
-		ok, _ := session.TryImprint(nil)
+		// Resolve player's faction modifiers for imprint_attempt phase (may be nil)
+		mods, _ := faction.ResolveImprintModifiers(faction.WrapDB(h.db), playerUUID, faction.PhaseImprintAttempt)
+		imprintProb = battle.ImprintProbability(session.TargetRarity, mods)
+		ok, _ := session.TryImprint(mods)
 		imprintSuccess = ok
 		if ok {
 			// Imprint: insert a new player_monsters row for the player, referencing the captured variant

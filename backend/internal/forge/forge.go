@@ -178,6 +178,26 @@ func WrapDB(db *sql.DB) DBExecutor {
 	return &sqlDBAdapter{db: db}
 }
 
+
+// sqlTxAdapter wraps *sql.Tx to satisfy DBExecutor (for transactional forge).
+type sqlTxAdapter struct{ tx *sql.Tx }
+
+func (a *sqlTxAdapter) QueryRow(q string, args ...interface{}) RowScanner {
+	return a.tx.QueryRow(q, args...)
+}
+func (a *sqlTxAdapter) Exec(q string, args ...interface{}) (sql.Result, error) {
+	return a.tx.Exec(q, args...)
+}
+
+// WrapDB2 returns a DBExecutor backed by a *sql.Tx (transactional path).
+func WrapDB2(tx *sql.Tx) DBExecutor {
+	if tx == nil {
+		return nil
+	}
+	return &sqlTxAdapter{tx: tx}
+}
+
+
 // recipe captures one row from forge_recipes.
 type recipe struct {
 	SourceCount   int
