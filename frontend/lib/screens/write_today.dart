@@ -1,36 +1,23 @@
-// write_today.dart — 今日書寫畫面（靈魂墨水輸入）
-//
-// Responsibilities:
-//   - Rich text input with live char count
-//   - Wuxing detection hint (placeholder for AI analysis)
-//   - Emotion tag selection (5 options)
-//   - Submit writing -> POST /api/writings
-//
-// TODO: implement AI wuxing detection endpoint integration
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../api/echo_client.dart';
+import '../main.dart';
+import '../theme/echo_theme.dart';
 
-class WriteTodayScreen extends StatefulWidget {
+const _emotions = ['累', '想哭', '火大', '好像懂了', '平', '煩', '爽', '開心', '莫名', '想睡'];
+
+class WriteTodayScreen extends ConsumerStatefulWidget {
   const WriteTodayScreen({super.key});
-
   @override
-  State<WriteTodayScreen> createState() => _WriteTodayScreenState();
+  ConsumerState<WriteTodayScreen> createState() => _WriteTodayState();
 }
 
-class _WriteTodayScreenState extends State<WriteTodayScreen> {
-  final TextEditingController _controller = TextEditingController();
-  int _charCount = 0;
-  String? _selectedEmotion;
-
-  // TODO: localise these labels
-  static const _emotionOptions = ['喜', '怒', '哀', '懼', '驚'];
-
-  @override
-  void initState() {
-    super.initState();
-    _controller.addListener(() {
-      setState(() => _charCount = _controller.text.length);
-    });
-  }
+class _WriteTodayState extends ConsumerState<WriteTodayScreen> {
+  final _controller = TextEditingController();
+  String? _emotion;
+  bool _loading = false;
+  String _status = '';
+  Map<String, dynamic>? _result;
 
   @override
   void dispose() {
@@ -38,103 +25,151 @@ class _WriteTodayScreenState extends State<WriteTodayScreen> {
     super.dispose();
   }
 
+  Future<void> _submit() async {
+    if (_controller.text.trim().isEmpty || _emotion == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請寫一段文字並選一個情緒')),
+      );
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _status = '送出書寫…';
+      _result = null;
+    });
+    final client = ref.read(clientProvider);
+    try {
+      final id = await client.postWriting(content: _controller.text, emotionTag: _emotion!);
+      setState(() => _status = '後台 Gemini Flash 分析中（約 20-30 秒）…');
+      final analysis = await client.pollAnalysis(id);
+      setState(() {
+        _result = analysis;
+        _status = '完成';
+      });
+    } on DuplicateWritingException catch (e) {
+      setState(() => _status = '⚠ ${e.toString()}');
+    } catch (e) {
+      setState(() => _status = '❌ $e');
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool canSubmit = _charCount >= 50;
     return Scaffold(
-      backgroundColor: const Color(0xFF1A0A00),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: const Text('今日書寫', style: TextStyle(color: Color(0xFFD4A050))),
-        iconTheme: const IconThemeData(color: Color(0xFFD4A050)),
-      ),
-      body: Padding(
+      appBar: AppBar(title: const Text('今日書寫')),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildEmotionPicker(),
-            const SizedBox(height: 16),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                maxLines: null,
-                expands: true,
-                style: const TextStyle(color: Color(0xFFE8C880), fontSize: 16, height: 1.8),
-                decoration: InputDecoration(
-                  hintText: '以言應物，此刻你感受到什麼？',
-                  hintStyle: const TextStyle(color: Color(0xFF5A3A20)),
-                  filled: true,
-                  fillColor: const Color(0xFF2A1500),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+            TextField(
+              controller: _controller,
+              maxLines: 6,
+              decoration: const InputDecoration(
+                hintText: '例：通勤路上看著車窗外的雨，覺得一切都很遙遠…',
               ),
+              style: const TextStyle(fontSize: 15, height: 1.6),
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '$_charCount 字  ${canSubmit ? "" : "(最少 50 字)"}',
-                  style: TextStyle(
-                    color: canSubmit ? const Color(0xFF8ACA60) : const Color(0xFF9A7050),
-                  ),
-                ),
-                // TODO: disable button and show loading state during API call
-                ElevatedButton(
-                  onPressed: canSubmit ? _submitWriting : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD4A050),
-                    foregroundColor: const Color(0xFF1A0A00),
-                  ),
-                  child: const Text('映刻靈魂'),
-                ),
-              ],
+            const SizedBox(height: 16),
+            const Text('選擇情緒', style: TextStyle(color: EchoColors.muted)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _emotions.map((e) {
+                final sel = _emotion == e;
+                return ChoiceChip(
+                  label: Text(e),
+                  selected: sel,
+                  onSelected: (_) => setState(() => _emotion = e),
+                  backgroundColor: EchoColors.bg,
+                  selectedColor: EchoColors.accent,
+                  labelStyle: TextStyle(color: sel ? const Color(0xFF1A1A1A) : EchoColors.fg),
+                  side: const BorderSide(color: EchoColors.border),
+                );
+              }).toList(),
             ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _loading ? null : _submit,
+              child: Text(_loading ? '分析中…' : '應物'),
+            ),
+            const SizedBox(height: 14),
+            if (_status.isNotEmpty)
+              Text(_status, style: const TextStyle(color: EchoColors.muted, fontSize: 13)),
+            const SizedBox(height: 24),
+            if (_result != null) _ResultCard(_result!),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildEmotionPicker() {
-    return Row(
-      children: _emotionOptions.map((e) {
-        final selected = _selectedEmotion == e;
-        return GestureDetector(
-          onTap: () => setState(() => _selectedEmotion = selected ? null : e),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.only(right: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: selected ? const Color(0xFFD4A050) : const Color(0xFF2A1500),
-              border: Border.all(
-                color: selected ? const Color(0xFFD4A050) : const Color(0xFF5A3A20),
+class _ResultCard extends StatelessWidget {
+  const _ResultCard(this.r);
+  final Map<String, dynamic> r;
+  @override
+  Widget build(BuildContext context) {
+    final w = r['wuxing_detected'] as String? ?? '';
+    final v = (r['validity_score'] as num?)?.toDouble() ?? 0.0;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: EchoColors.panel,
+        border: Border.all(color: EchoColors.border),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Text('五行 ', style: TextStyle(color: EchoColors.muted)),
+            if (w.isNotEmpty) WuxingBadge(w),
+            const SizedBox(width: 16),
+            Text('九曜 ${r["celestial_detected"] ?? "—"}',
+                style: const TextStyle(color: EchoColors.fg)),
+          ]),
+          const SizedBox(height: 10),
+          Text('共鳴體 · ${r["monster_name"] ?? "—"}',
+              style: const TextStyle(color: EchoColors.accent, fontSize: 22)),
+          const SizedBox(height: 12),
+          Row(children: [
+            const Text('真誠度 ', style: TextStyle(color: EchoColors.muted)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: LinearProgressIndicator(
+                value: v,
+                backgroundColor: EchoColors.bg,
+                color: EchoColors.accent,
+                minHeight: 8,
               ),
             ),
+            const SizedBox(width: 8),
+            Text('${(v * 100).toStringAsFixed(0)}%',
+                style: const TextStyle(color: EchoColors.muted, fontSize: 12)),
+          ]),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              color: EchoColors.bg,
+              border: Border(left: BorderSide(color: EchoColors.accent, width: 3)),
+            ),
             child: Text(
-              e,
-              style: TextStyle(
-                color: selected ? const Color(0xFF1A0A00) : const Color(0xFF9A7050),
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              r['card_quote'] as String? ?? '',
+              style: const TextStyle(
+                fontStyle: FontStyle.italic,
+                color: EchoColors.fg,
+                fontSize: 15,
+                height: 1.7,
               ),
             ),
           ),
-        );
-      }).toList(),
-    );
-  }
-
-  void _submitWriting() {
-    // TODO: call ApiService.submitWriting(content, emotion, wuxingHint)
-    //       then trigger forge eligibility check
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('書寫已映刻 — API 尚未接通')),
+        ],
+      ),
     );
   }
 }

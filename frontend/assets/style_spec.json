@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "designer": "Gemini 3.1 Pro (gemini-3-pro-preview, thinking_budget=high)",
+    "designed_at": "2026-05-17",
+    "approved_by": "pending Simon review",
+    "reference_games": ["Octopath Traveler", "Triangle Strategy", "Live A Live (remake)"]
+  },
+  "style_spec": {
+    "art_style": "HD-2D classic RPG style (Octopath/Live A Live remake flavor). Solemn, ancient mythology meets psychological manifestation. Strong emphasis on Han dynasty stone carvings, bronze ware motifs, and ancient totems. Zero cuteness/chibi; creatures must evoke a sense of awe, antiquity, and emotional resonance.",
+    "rendering": "Masterpiece pixel art, targeted at 128px base sprite resolution (intelligible at small scale), 16-bit retro-modern color palette, sharp individual pixels without anti-aliasing on the core sprite, blended with modern post-processing rendering techniques.",
+    "camera_angle": "Isometric 3/4 front-facing perspective, placed on a subtle dimensional ground plane.",
+    "lighting": "Dramatic studio lighting, cinematic HD-2D style. 45-degree top-left directional main light, intense volumetric lighting (god rays) piercing through the atmosphere, strong glowing rim light on the creature's edge.",
+    "shadow_style": "Deep, high-contrast ambient occlusion. Harsh, pitch-black drop shadows directly underneath the creature to ground it. Self-shadowing follows rigid pixel art shading clusters.",
+    "atmospheric_treatment": "Shallow depth of field (tilt-shift effect). The creature in the foreground is pixel-perfect and razor-sharp, while the background consists of soft, out-of-focus cinematic bokeh, mystical fog, and faint particle dust.",
+    "linework": "Selective pixel outlining (darker tones of the base colors) on the sprite's outer edges to ensure readability on small mobile screens. No linework on atmospheric effects or background.",
+    "negative_prompts": ["chibi", "cute", "kawaii", "modern cartoon", "anime style", "smooth vector graphics", "3D render", "firearms", "modern weapons", "cyberpunk", "messy ai pixels", "blurry sprite", "humanoid cosplay"]
+  },
+  "wuxing_palette": {
+    "metal": { "primary": "#E5C07B", "secondary": "#7F848E", "accent": "#C678DD", "lore_keyword": "tarnished bronze, sharp grief, metallic sheen, unyielding sorrow" },
+    "wood":  { "primary": "#2E5A1C", "secondary": "#1A2C19", "accent": "#88B04B", "lore_keyword": "decaying bark, deep resentment, ancient roots, overgrown moss" },
+    "water": { "primary": "#0F2537", "secondary": "#3B7A89", "accent": "#E0FFFF", "lore_keyword": "abyssal depths, fluid melancholy, pale moonlight on dark waves, freezing despair" },
+    "fire":  { "primary": "#8A1C14", "secondary": "#2D1111", "accent": "#FF6B35", "lore_keyword": "cinnabar ash, raging obsession, glowing embers, sacrificial flames" },
+    "earth": { "primary": "#9A7B4F", "secondary": "#3E3222", "accent": "#E9D6AF", "lore_keyword": "ancient loess, heavy apathy, obsidian shards, weathered jade carvings" }
+  },
+  "rarity_tier_visual": {
+    "common":    { "power_aura": "Subtle grounding aura, faint elemental dust at the feet.", "effects": "Static pose, clean silhouette, focusing on the core anatomy of the creature.", "border": "No border, stands on a simple ancient stone slab." },
+    "rare":      { "power_aura": "Swirling elemental energy surrounding the body, distinct volumetric glow from the core.", "effects": "Dynamic stance, floating ancient Hanzi (Chinese characters) faintly glowing in the background fog.", "border": "No border, stands on a glowing engraved bronze pedestal." },
+    "legendary": { "power_aura": "Massive divine halo, explosive elemental manifestation, blinding rim light and god rays.", "effects": "God-like presence, intricate floating ancient seal-script runes, ethereal floating jade/bronze armor fragments, intense cinematic bloom.", "border": "No border, hovering over a shattered, levitating mythological altar." }
+  },
+  "prompt_template": "A masterpiece HD-2D pixel art sprite of a Shan Hai Jing mythological beast named '{species_zh}'. LORE: {species_lore}. ELEMENT: {wuxing}. COLOR PALETTE: {wuxing_palette_desc}. RARITY TIER: {rarity}. VISUAL EFFECTS: {rarity_aura}. STYLE: Strict 16-bit classic RPG pixel art character, isometric 3/4 front-facing view. Solemn, ancient, monumental vibe inspired by Han dynasty stone reliefs and ancient bronze totems. RENDERING: Dramatic 45-degree directional lighting, intense volumetric god rays, glowing rim light. Deep, harsh drop shadows underneath. Foreground sprite is sharp with crisp pixel edges, set against a beautifully blurred, out-of-focus atmospheric bokeh background with mystical fog. Designed for 128px readability. --no chibi, cute, modern cartoon, anime, 3d render, vector, blurry edges, firearms, sci-fi, humanoid cosplay",
+  "sample_filled_prompt": "A masterpiece HD-2D pixel art sprite of a Shan Hai Jing mythological beast named '帝江幼形' (Infant Di Jiang). LORE: A faceless, six-legged, four-winged ancient entity, manifesting from human confusion and primordial chaos. ELEMENT: earth. COLOR PALETTE: ancient loess, heavy apathy, obsidian shards, weathered jade carvings. Primary colors are warm muddy yellow and dark brown with pale jade accents. RARITY TIER: common. VISUAL EFFECTS: Subtle grounding aura, faint elemental dust at the feet, static pose, clean silhouette, standing on a simple ancient stone slab. STYLE: Strict 16-bit classic RPG pixel art character, isometric 3/4 front-facing view. Solemn, ancient, monumental vibe inspired by Han dynasty stone reliefs and ancient bronze totems. RENDERING: Dramatic 45-degree directional lighting, intense volumetric god rays, glowing rim light. Deep, harsh drop shadows underneath. Foreground sprite is sharp with crisp pixel edges, set against a beautifully blurred, out-of-focus atmospheric bokeh background with mystical fog. Designed for 128px readability. --no chibi, cute, modern cartoon, anime, 3d render, vector, blurry edges, firearms, sci-fi, humanoid cosplay",
+  "quality_checklist": [
+    "1. Readability: Is the creature's silhouette highly distinct and recognizable even if scaled down to a 5-inch mobile screen (around 128px)?",
+    "2. Tone/Atmosphere: Does the creature look solemn, ancient, and mythological (passing the 'Bronze/Stone Carving' vibe check), strictly avoiding any cute or chibi proportions?",
+    "3. HD-2D Lighting: Does the image feature a strong 45-degree directional light, volumetric rays, and a deep, grounding drop shadow underneath the sprite?",
+    "4. Elemental Accuracy: Does the color palette clearly reflect its assigned WuXing (Metal/Wood/Water/Fire/Earth) while maintaining the ancient aesthetic?",
+    "5. Pixel Art Fidelity: Is the main subject clearly rendered in a crisp pixel art style (with visible pixel clusters) rather than looking like a smooth digital painting or a messy 3D render?"
+  ]
+}
