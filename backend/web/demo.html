@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>應物 ECHO — 完整循環</title>
+<style>
+  :root {
+    --bg:#0d1117; --fg:#e6edf3; --accent:#d4a574; --accent-soft:#b08c5f;
+    --muted:#8b949e; --panel:#161b22; --border:#30363d;
+    --w-metal:#d4d4d4; --w-wood:#7cb342; --w-water:#5c9ce6; --w-fire:#e64b4b; --w-earth:#c08a4e;
+    --r-common:#8b949e; --r-rare:#5c9ce6; --r-legendary:#d4a574;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: "Noto Serif TC", Charter, Georgia, serif; background:var(--bg); color:var(--fg); padding:32px; line-height:1.7; }
+  h1 { font-size:28px; margin:0 0 4px 0; color:var(--accent); letter-spacing:2px; font-weight:500; }
+  .sub { color:var(--muted); margin:0 0 24px 0; font-size:14px; }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:1300px; }
+  @media (max-width:880px) { .grid2 { grid-template-columns:1fr; } }
+  .full { max-width:1300px; }
+  .panel { background:var(--panel); border:1px solid var(--border); padding:22px; border-radius:8px; margin-bottom:20px; }
+  h3 { margin:0 0 14px 0; color:var(--accent-soft); font-weight:500; letter-spacing:1px; font-size:18px; }
+  textarea { width:100%; min-height:140px; background:#0d1117; color:var(--fg); border:1px solid var(--border); padding:12px; border-radius:6px; font: inherit; font-size:15px; line-height:1.7; resize:vertical; }
+  .row { display:flex; gap:10px; align-items:center; margin:10px 0; flex-wrap:wrap; }
+  .row label { color:var(--muted); font-size:13px; min-width:70px; }
+  input[type=text] { flex:1; background:#0d1117; color:var(--fg); border:1px solid var(--border); padding:8px 12px; border-radius:6px; font:inherit; font-size:14px; }
+  .emo, .mode-toggle span { padding:5px 13px; border:1px solid var(--border); border-radius:18px; cursor:pointer; user-select:none; background:#0d1117; font-size:13px; }
+  .emo.sel, .mode-toggle span.sel { background:var(--accent); color:#1a1a1a; border-color:var(--accent); }
+  .mode-toggle { display:inline-flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+  .mode-toggle span { border-radius:0; padding:6px 14px; border:none; }
+  button { background:var(--accent); color:#1a1a1a; border:none; padding:10px 22px; border-radius:6px; font: inherit; font-weight:600; cursor:pointer; transition:all .15s; }
+  button:hover:not(:disabled) { background:#e6b988; }
+  button:disabled { opacity:0.4; cursor:wait; }
+  button.secondary { background:#30363d; color:var(--fg); padding:6px 14px; font-size:13px; }
+  button.danger { background:#a04040; color:#fff; }
+  .meta { color:var(--muted); font-size:12px; margin-top:10px; min-height:1em; }
+  .placeholder { color:var(--muted); font-style:italic; }
+  .field { display:flex; gap:14px; margin:8px 0; }
+  .field .k { color:var(--muted); min-width:80px; font-size:13px; letter-spacing:1px; }
+  .field .v { color:var(--fg); font-size:15px; }
+  .w-metal{background:var(--w-metal)} .w-wood{background:var(--w-wood)} .w-water{background:var(--w-water)} .w-fire{background:var(--w-fire)} .w-earth{background:var(--w-earth)}
+  .badge { display:inline-block; padding:2px 10px; border-radius:12px; color:#0d1117; font-weight:600; font-size:13px; }
+  .card-quote { font-style:italic; padding:14px 18px; border-left:3px solid var(--accent); margin-top:14px; background:#0d1117; border-radius:0 6px 6px 0; font-size:15px; }
+  .validity-bar { background:#0d1117; height:10px; border-radius:5px; overflow:hidden; border:1px solid var(--border); flex:1; }
+  .validity-fill { height:100%; background:linear-gradient(90deg,#c08a4e,#d4a574); transition:width .8s; }
+  .mcard { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:12px; min-width:170px; cursor:pointer; transition:all .15s; }
+  .mcard:hover { border-color:var(--accent); }
+  .mcard.sel { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); background:#1a1410; }
+  .mcard .name { font-size:16px; color:var(--accent); }
+  .mcard .meta { font-size:11px; margin-top:2px; }
+  .mcard .stats { font-size:13px; margin-top:6px; display:flex; justify-content:space-between; align-items:center; }
+  .mcards { display:flex; flex-wrap:wrap; gap:10px; }
+  .battle-log { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:14px; font-family: monospace; font-size:13px; line-height:1.7; }
+  .battle-log .turn { color:var(--muted); }
+  .battle-log .crit { color:var(--accent); font-weight:600; }
+  .battle-log .reverse { color:#e64b4b; font-weight:600; }
+  .battle-log .capture { color:#d4a574; font-weight:600; font-size:15px; }
+  .footer { color:var(--muted); margin-top:32px; font-size:12px; line-height:1.6; max-width:1300px; }
+  code { background:#0d1117; padding:2px 7px; border-radius:3px; color:var(--accent); font-size:12px; }
+  .spinner { display:inline-block; width:12px; height:12px; border:2px solid var(--accent); border-right-color:transparent; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; margin-right:6px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .star { color:var(--accent); }
+</style>
+</head>
+<body>
+<h1>應物 ECHO · 完整循環</h1>
+<p class="sub">寫作 → 山海經應物 → 收藏 → 鎔鑄升階 → 對戰捕獲</p>
+
+<div class="full panel">
+  <h3>一、書寫</h3>
+  <div class="grid2">
+    <div>
+      <textarea id="content" placeholder="例：通勤路上看著車窗外的雨，覺得一切都很遙遠..."></textarea>
+      <div class="row">
+        <label>情緒</label>
+        <div id="emotions"></div>
+      </div>
+      <div class="row">
+        <label>地點</label>
+        <input id="loc" placeholder="(可空)">
+      </div>
+      <div class="row">
+        <label>模式</label>
+        <div class="mode-toggle" id="modeToggle">
+          <span class="sel" data-mode="demo">demo · 同步 11s</span>
+          <span data-mode="prod">production · DB + 入收藏</span>
+        </div>
+      </div>
+      <button id="submit">應物</button>
+      <p class="meta" id="meta"></p>
+    </div>
+    <div id="result">
+      <p class="placeholder">尚未提交。AI 用 25 個 emotion×scene 模板呼山海經誕生你的共鳴體。</p>
+    </div>
+  </div>
+</div>
+
+<div class="full panel">
+  <h3>二、收藏 (player_monsters)</h3>
+  <div id="collection"><p class="placeholder">載入中…</p></div>
+  <div class="row" style="margin-top:14px;">
+    <button class="secondary" id="refreshColl">重整</button>
+    <span style="color:var(--muted); font-size:12px; margin-left:auto;" id="collStats"></span>
+  </div>
+</div>
+
+<div class="full panel">
+  <h3>三、鎔鑄 (forge)</h3>
+  <p class="meta" style="margin-bottom:14px;">選 3 張同情緒、同五行的 common 升 rare（需 500 字）；選 3 張同情緒、同五行的 rare 升 legendary（需 2000 字 + 99 隻全球上限）</p>
+  <div class="row">
+    <label>快速種卡</label>
+    <select id="seedEmo"></select>
+    <select id="seedWux"><option value="metal">金</option><option value="wood">木</option><option value="water" selected>水</option><option value="fire">火</option><option value="earth">土</option></select>
+    <button class="secondary" id="seedBtn">種 3 張 common</button>
+    <span style="margin-left:18px; color:var(--muted);">→</span>
+    <button id="forgeRare" disabled>鎔鑄選定的 3 張 → rare</button>
+    <button id="forgeLeg" class="danger" disabled style="margin-left:8px;">3 張 rare → legendary</button>
+  </div>
+  <p class="meta" id="forgeMeta"></p>
+  <div id="forgeResult" style="margin-top:12px;"></div>
+</div>
+
+<div class="full panel">
+  <h3>四、對戰 (battle)</h3>
+  <p class="meta" style="margin-bottom:14px;">挑一隻你的共鳴體出戰；系統隨機指派一隻山海者作為敵手。HP 跌破 30% 開鏡之窗，可嘗試永久收編。</p>
+  <div class="row">
+    <span style="color:var(--muted); font-size:13px;">已選戰士：<span id="battlePick" style="color:var(--accent);">無</span></span>
+    <button id="battleBtn" disabled style="margin-left:18px;">出戰</button>
+  </div>
+  <div id="battleResult" style="margin-top:14px;"></div>
+</div>
+
+<div class="footer">
+  Backend：<code>POST /api/v1/writings</code>（DB + 後台 Gemini）/ <code>POST /api/v1/demo/analyze</code>（同步）/ <code>GET /api/v1/monsters</code> / <code>POST /api/v1/forge</code> / <code>POST /api/v1/dev/seed-cards</code> / <code>POST /api/v1/battle</code><br>
+  Stack：Go 1.22 · gin · lib/pq · gemini-2.5-flash · PostgreSQL 16 · 山海經 25 species × 5 wuxing × 3 rarity = 375 variants（v0.5 種 300）<br>
+  Dedup：UNIQUE(player_id, content_hash) 防同文重寫；Legendary cap：99/species 全球上限，超額自動退 80% 材料
+</div>
+
+<script>
+const EMOTIONS = ['累','想哭','火大','好像懂了','平','煩','爽','開心','莫名','想睡'];
+const WUXING_CN = { metal:'金', wood:'木', water:'水', fire:'火', earth:'土' };
+let emo=null, mode='demo', sel={}, battleSel=null;
+
+// init emotion buttons
+const emoBox = document.getElementById('emotions');
+EMOTIONS.forEach(e=>{
+  const s = document.createElement('span');
+  s.className='emo'; s.dataset.tag=e; s.textContent=e;
+  s.onclick=()=>{ document.querySelectorAll('.emo').forEach(x=>x.classList.remove('sel')); s.classList.add('sel'); emo=e; };
+  emoBox.appendChild(s);
+});
+// seed emotion dropdown
+const seedEmo = document.getElementById('seedEmo');
+EMOTIONS.forEach(e=>{ const o=document.createElement('option'); o.value=e; o.textContent=e; seedEmo.appendChild(o); });
+seedEmo.value='想哭';
+// mode toggle
+document.querySelectorAll('#modeToggle span').forEach(el=>{
+  el.onclick=()=>{ document.querySelectorAll('#modeToggle span').forEach(x=>x.classList.remove('sel')); el.classList.add('sel'); mode=el.dataset.mode; };
+});
+
+function badge(w) { return `<span class="badge w-${w}">${WUXING_CN[w]||w}</span>`; }
+function rarityDot(r){ return `<span style="color:var(--r-${r})">●</span> ${r}`; }
+function star(r){ return r==='legendary'?'★★':r==='rare'?'★':'·'; }
+
+function renderResult(a){
+  const v = (a.validity_score||0)*100;
+  document.getElementById('result').innerHTML = `
+    <div class="field"><span class="k">五行</span><span class="v">${a.wuxing_detected?badge(a.wuxing_detected):'—'}</span></div>
+    <div class="field"><span class="k">九曜</span><span class="v">${a.celestial_detected||'—'}</span></div>
+    <div class="field"><span class="k">共鳴體</span><span class="v" style="font-size:22px; color:var(--accent);">${a.monster_name||'—'}</span></div>
+    <div class="field"><span class="k">真誠度</span><span class="v" style="flex:1; display:flex; align-items:center; gap:10px;"><div class="validity-bar"><div class="validity-fill" style="width:${v}%"></div></div><span style="font-size:12px; color:var(--muted);">${v.toFixed(0)}%</span></span></div>
+    ${a.used_fallback?'<div class="meta" style="color:#f0a040;">⚠ heuristic fallback</div>':''}
+    <div class="card-quote">${a.card_quote||''}</div>
+  `;
+}
+
+async function poll(wid){
+  for(let i=0;i<30;i++){
+    await new Promise(r=>setTimeout(r,2000));
+    document.getElementById('meta').innerHTML=`<span class="spinner"></span> 後台 Gemini 分析中… (${(i+1)*2}s)`;
+    const r = await fetch(`/api/v1/writings/${wid}/analysis`);
+    if(!r.ok) continue;
+    const j = await r.json();
+    if(j.status==='COMPLETE') return j;
+    if(j.status==='FAILED') throw new Error('analysis failed');
+  }
+  throw new Error('timeout');
+}
+
+document.getElementById('submit').onclick = async ()=>{
+  const content = document.getElementById('content').value.trim();
+  if(!content) return alert('請寫點東西');
+  if(!emo) return alert('請選情緒');
+  const btn = document.getElementById('submit'); btn.disabled=true; btn.textContent='分析中…';
+  document.getElementById('meta').innerHTML='<span class="spinner"></span> 送出…';
+  try {
+    const t0 = performance.now();
+    let res;
+    if(mode==='demo'){
+      const r = await fetch('/api/v1/demo/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content,emotion_tag:emo})});
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.error||'demo fail');
+      res = j.analysis;
+    } else {
+      const r = await fetch('/api/v1/writings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content,emotion_tag:emo,location_alias:document.getElementById('loc').value.trim(),word_count:content.length})});
+      const j = await r.json();
+      if(r.status===409){ document.getElementById('meta').innerHTML='<span style="color:#f0a040">⚠ '+j.error+' (existing id: '+j.writing_id.substring(0,8)+')</span>'; return; }
+      if(!r.ok) throw new Error(j.error||'prod fail');
+      res = await poll(j.writing_id);
+      setTimeout(loadCollection, 1500);
+    }
+    renderResult(res);
+    document.getElementById('meta').textContent = `回應 ${((performance.now()-t0)/1000).toFixed(1)}s · 模式 ${mode}`;
+  } catch(e){
+    document.getElementById('result').innerHTML=`<p style="color:#ff6b6b">錯誤：${e.message}</p>`;
+    document.getElementById('meta').textContent='';
+  } finally {
+    btn.disabled=false; btn.textContent='應物';
+  }
+};
+
+async function loadCollection(){
+  const r = await fetch('/api/v1/monsters');
+  const j = await r.json();
+  if(j.stub_mode){ document.getElementById('collection').innerHTML='<p class="placeholder">stub mode</p>'; return; }
+  if(j.count===0){ document.getElementById('collection').innerHTML='<p class="placeholder">無收藏。送出 production 模式書寫後自動入庫。</p>'; document.getElementById('collStats').textContent=''; return; }
+  document.getElementById('collStats').textContent = `總計 ${j.count}（common ${j.monsters.filter(m=>m.rarity==='common').length} · rare ${j.monsters.filter(m=>m.rarity==='rare').length} · legendary ${j.monsters.filter(m=>m.rarity==='legendary').length}）`;
+  document.getElementById('collection').innerHTML = '<div class="mcards">' +
+    j.monsters.map(m=>`
+      <div class="mcard ${sel[m.id]?'sel':''}" data-id="${m.id}" data-rarity="${m.rarity}" data-wuxing="${m.wuxing_attr}">
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <span class="name">${star(m.rarity)} ${m.nickname||m.species_name}</span>
+          ${badge(m.wuxing_attr)}
+        </div>
+        <div class="meta">${m.species_name} · ${m.position}</div>
+        <div class="stats">${rarityDot(m.rarity)}<span>⚔ ${m.power_base} ♥ ${m.hp_base}</span></div>
+      </div>`).join('') + '</div>';
+  document.querySelectorAll('.mcard').forEach(c=>{
+    c.onclick = ()=>{
+      const id = c.dataset.id;
+      // Two modes: forge multi-select OR battle single-select. Use right-click for battle, left-click for forge.
+      if(sel[id]) delete sel[id];
+      else sel[id] = { rarity:c.dataset.rarity, wuxing:c.dataset.wuxing };
+      c.classList.toggle('sel');
+      updateForgeButtons();
+    };
+    c.oncontextmenu = (e)=>{
+      e.preventDefault();
+      battleSel = c.dataset.id;
+      document.getElementById('battlePick').textContent = c.querySelector('.name').textContent;
+      document.getElementById('battleBtn').disabled = false;
+    };
+  });
+}
+
+function updateForgeButtons(){
+  const ids = Object.keys(sel);
+  const commons = ids.filter(i=>sel[i].rarity==='common');
+  const rares = ids.filter(i=>sel[i].rarity==='rare');
+  document.getElementById('forgeRare').disabled = !(commons.length===3 && new Set(commons.map(i=>sel[i].wuxing)).size===1);
+  document.getElementById('forgeLeg').disabled  = !(rares.length===3   && new Set(rares.map(i=>sel[i].wuxing)).size===1);
+}
+
+document.getElementById('seedBtn').onclick = async ()=>{
+  const e = seedEmo.value, w = document.getElementById('seedWux').value;
+  document.getElementById('forgeMeta').textContent = `種 3 張 ${e}+${WUXING_CN[w]} common…`;
+  const r = await fetch(`/api/v1/dev/seed-cards?emotion=${encodeURIComponent(e)}&wuxing=${w}`, {method:'POST'});
+  const j = await r.json();
+  document.getElementById('forgeMeta').textContent = j.error ? '❌ '+j.error : `✓ 種 3 張 ${e}+${WUXING_CN[w]} common（已加入收藏）`;
+  loadCollection();
+};
+
+async function doForge(target){
+  const ids = Object.entries(sel).filter(([_,v])=>v.rarity===(target==='rare'?'common':'rare')).map(([k,_])=>k).slice(0,3);
+  document.getElementById('forgeMeta').innerHTML = '<span class="spinner"></span> 鎔鑄中…';
+  document.getElementById('forgeResult').innerHTML = '';
+  const r = await fetch('/api/v1/forge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_ids:ids,target_rarity:target,chars_accumulated:target==='rare'?500:2000})});
+  const j = await r.json();
+  if(!r.ok && r.status!==409){
+    document.getElementById('forgeMeta').textContent = '❌ '+j.error;
+    return;
+  }
+  if(r.status===409){
+    document.getElementById('forgeResult').innerHTML = `<p style="color:#f0a040">⚠ ${j.error}<br>已退還 ${j.refunded_card_ids?.length||0} 張材料卡（80%）</p>`;
+  } else {
+    document.getElementById('forgeResult').innerHTML = `<p>✨ 鎔鑄成功：<span style="color:var(--accent); font-size:18px;">${star(target)} ${target}</span> 新共鳴體 <code>${j.forged_monster_id.substring(0,8)}</code></p>`;
+  }
+  document.getElementById('forgeMeta').textContent = '';
+  sel = {}; loadCollection();
+}
+document.getElementById('forgeRare').onclick = ()=>doForge('rare');
+document.getElementById('forgeLeg').onclick  = ()=>doForge('legendary');
+
+document.getElementById('battleBtn').onclick = async ()=>{
+  if(!battleSel) return;
+  const btn = document.getElementById('battleBtn'); btn.disabled=true; btn.textContent='對戰中…';
+  document.getElementById('battleResult').innerHTML = '<p><span class="spinner"></span> 召喚共鳴體…</p>';
+  try {
+    const r = await fetch('/api/v1/battle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({attacker_monster_id:battleSel})});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error);
+    const log = j.rounds.map(rd=>`<div class="turn">T${rd.turn} ${rd.actor==='attacker'?'你':'敵'} -${rd.damage} → 你 ${rd.attacker_hp} ｜ 敵 ${rd.defender_hp}</div>`).join('');
+    const reverseTag = j.reverse_gambit_triggered ? '<div class="reverse">▽ Reverse Gambit 觸發 — 敵 HP &lt; 30%</div>' : '';
+    const mirrorTag = j.mirror_window_opened ? '<div class="crit">○ 鏡之窗開啟</div>' : '';
+    const imprintTag = j.imprint_attempted ? `<div>印記嘗試 prob=${j.imprint_probability.toFixed(2)} → ${j.imprint_success?'<span class="capture">✨ 永久收編！'+j.captured_nickname+'</span>':'失敗'}</div>` : '';
+    document.getElementById('battleResult').innerHTML = `
+      <div class="battle-log">
+        <div style="margin-bottom:8px;">⚔ <b>${j.attacker_species}</b> ${badge(j.attacker_wuxing)} vs <b>${j.defender_nickname||j.defender_species}</b> ${badge(j.defender_wuxing)}</div>
+        <div class="meta">五行壓制 ×${j.damage_multiplier}</div>
+        ${log}
+        ${reverseTag}
+        ${mirrorTag}
+        <div style="margin-top:10px;">結果：<b>${({attacker_won:'勝',defender_won:'敗',mirror_window_open:'鏡之窗',draw:'平'}[j.outcome])||j.outcome}</b></div>
+        ${imprintTag}
+      </div>`;
+    if(j.imprint_success) setTimeout(loadCollection, 800);
+  } catch(e){
+    document.getElementById('battleResult').innerHTML = `<p style="color:#ff6b6b">${e.message}</p>`;
+  } finally {
+    btn.disabled=false; btn.textContent='出戰';
+  }
+};
+document.getElementById('refreshColl').onclick = loadCollection;
+loadCollection();
+</script>
+</body>
+</html>

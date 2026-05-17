@@ -44,3 +44,6 @@ logs/
 # Build artefacts
 dist/
 tmp/
+
+# Codex CLI session artefacts
+.codex
