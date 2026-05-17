@@ -1,5 +1,7 @@
 # Go
 /backend/bin/
+/backend/server
+/backend/cmd/*/main
 /backend/vendor/
 *.exe
 *.test
