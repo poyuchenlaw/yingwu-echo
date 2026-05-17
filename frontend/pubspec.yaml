@@ -25,6 +25,7 @@ flutter:
     - assets/portraits/
     - assets/ui/
     - assets/items/
+    - assets/scenes/
     - assets/species_pinyin_map.json
     - assets/species_lore.json
     - assets/style_spec.json
