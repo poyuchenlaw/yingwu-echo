@@ -150,3 +150,32 @@ class LegendaryCapException implements Exception {
   final String message;
   final List<String> refundedIds;
 }
+
+/// Map raw exceptions to friendly Chinese messages for end users.
+/// Falls back to the raw toString() so we never swallow info during dev.
+String friendlyError(Object e) {
+  final s = e.toString();
+  if (s.contains('Operation not permitted') ||
+      s.contains('errno = 1') ||
+      s.contains('Connection refused') ||
+      s.contains('Failed host lookup') ||
+      s.contains('Connection failed') ||
+      s.contains('SocketException')) {
+    if (s.contains('10.0.2.2')) {
+      return '連不到後端：當前位址是 10.0.2.2（Android 模擬器專用）。'
+          '請按右上⚙ 設定，把 API 位址改為 Tailscale (http://100.84.86.128:8080) 並確認手機已連 Tailscale。';
+    }
+    return '連不到後端。請檢查：\n'
+        '1) WSL2 後端是否啟動（cd backend && go run ./cmd/server）\n'
+        '2) 手機是否已連 Tailscale\n'
+        '3) 右上⚙ 設定中的 API 位址是否正確';
+  }
+  if (s.contains('TimeoutException')) {
+    return '請求逾時。後端或 Gemini API 可能還在處理，請稍候再試。';
+  }
+  if (s.contains('FormatException')) {
+    return '後端回應格式錯誤（可能版本不符）。請更新 APK。';
+  }
+  return s;
+}
+

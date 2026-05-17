@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/echo_client.dart';
 import '../main.dart';
 import '../theme/echo_theme.dart';
+import '../widgets/help_sheet.dart';
 
 class BattleArenaScreen extends ConsumerStatefulWidget {
   const BattleArenaScreen({super.key});
@@ -29,7 +30,7 @@ class _BattleArenaState extends ConsumerState<BattleArenaScreen> {
       final ms = await ref.read(clientProvider).getMonsters();
       setState(() => _monsters = ms);
     } catch (e) {
-      setState(() => _status = '❌ $e');
+      setState(() => _status = '❌ ${friendlyError(e)}');
     } finally {
       setState(() => _loading = false);
     }
@@ -49,7 +50,7 @@ class _BattleArenaState extends ConsumerState<BattleArenaScreen> {
         _status = '';
       });
     } catch (e) {
-      setState(() => _status = '❌ $e');
+      setState(() => _status = '❌ ${friendlyError(e)}');
     } finally {
       setState(() => _loading = false);
     }
@@ -60,7 +61,30 @@ class _BattleArenaState extends ConsumerState<BattleArenaScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('鏡境對決'),
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: '對戰說明',
+            onPressed: () => showHelpSheet(context, title: '鏡境對決 · 玩法', entries: const [
+              HelpEntry('上方橫列', '你的共鳴體。點選一張為「攻方」，邊框變金色。',
+                  icon: Icons.pets),
+              HelpEntry('出戰', '送出後端模擬戰鬥，回傳每回合傷害紀錄。',
+                  icon: Icons.bolt),
+              HelpEntry('×N 傷害倍率',
+                  '五行相剋給的乘數（水剋火、火剋金…）。倍率越高你越占優勢。',
+                  icon: Icons.compare_arrows),
+              HelpEntry('T1 / T2 / …', '回合紀錄；左邊是動作方（你/敵）、右邊是雙方剩餘 HP。',
+                  icon: Icons.list_alt),
+              HelpEntry('Reverse Gambit',
+                  '低 HP 反殺機制；觸發時當回合傷害大幅放大。',
+                  icon: Icons.replay),
+              HelpEntry('鏡之窗',
+                  '勝利且滿足機率條件時開啟，可永久收編敵方共鳴體（v0.5 只對 NPC）。',
+                  icon: Icons.window),
+            ]),
+          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+        ],
       ),
       body: Column(
         children: [

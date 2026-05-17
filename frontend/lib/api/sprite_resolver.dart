@@ -1,7 +1,8 @@
 // sprite_resolver.dart — (species_zh, rarity) → asset path.
 // v0.5.3: all 3 rarities bundled (75 sprites total across common/rare/legendary).
+// v0.6.0: pinyin map loaded via ContentCache (GitHub raw → cache → bundled fallback).
 import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
+import '../services/content_cache.dart';
 
 class SpriteResolver {
   SpriteResolver._();
@@ -10,7 +11,10 @@ class SpriteResolver {
 
   Future<void> ensureLoaded() async {
     if (_pinyinByName != null) return;
-    final raw = await rootBundle.loadString('assets/species_pinyin_map.json');
+    final raw = await ContentCache.instance.loadString(
+      assetPath: 'assets/species_pinyin_map.json',
+      remotePath: 'frontend/assets/species_pinyin_map.json',
+    );
     final decoded = json.decode(raw) as Map<String, dynamic>;
     _pinyinByName = decoded.map((k, v) => MapEntry(k, v as String));
   }

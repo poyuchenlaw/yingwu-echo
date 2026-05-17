@@ -4,6 +4,7 @@ import '../api/echo_client.dart';
 import '../api/sprite_resolver.dart';
 import '../main.dart';
 import '../theme/echo_theme.dart';
+import '../widgets/help_sheet.dart';
 
 class IncarnationViewScreen extends ConsumerStatefulWidget {
   const IncarnationViewScreen({super.key});
@@ -29,7 +30,7 @@ class _IncarnationViewState extends ConsumerState<IncarnationViewScreen> {
       final ms = await ref.read(clientProvider).getMonsters();
       setState(() => _monsters = ms);
     } catch (e) {
-      setState(() => _status = '❌ $e');
+      setState(() => _status = '❌ ${friendlyError(e)}');
     } finally {
       setState(() => _loading = false);
     }
@@ -42,7 +43,7 @@ class _IncarnationViewState extends ConsumerState<IncarnationViewScreen> {
       setState(() => _status = '✓ 種 3 張');
       await _load();
     } catch (e) {
-      setState(() => _status = '❌ $e');
+      setState(() => _status = '❌ ${friendlyError(e)}');
     }
   }
 
@@ -76,7 +77,7 @@ class _IncarnationViewState extends ConsumerState<IncarnationViewScreen> {
       setState(() => _status = '⚠ ${e.message}（已退 ${e.refundedIds.length} 張）');
       await _load();
     } catch (e) {
-      setState(() => _status = '❌ $e');
+      setState(() => _status = '❌ ${friendlyError(e)}');
     }
   }
 
@@ -93,6 +94,28 @@ class _IncarnationViewState extends ConsumerState<IncarnationViewScreen> {
       appBar: AppBar(
         title: const Text('靈體圖鑑'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: '圖例',
+            onPressed: () => showHelpSheet(context, title: '靈體圖鑑 · 圖例', entries: const [
+              HelpEntry('卡片大圖', '怪物 sprite（512px JPEG）。底色因五行屬性會有微微 tint。',
+                  icon: Icons.image),
+              HelpEntry('★ 數量', '稀有度：· common（最普通）/ ★ rare / ★★ legendary（神獸）。',
+                  icon: Icons.star),
+              HelpEntry('右上彩色徽章', '五行：金灰 / 木綠 / 水藍 / 火紅 / 土黃。決定戰鬥相剋。',
+                  icon: Icons.circle),
+              HelpEntry('暱稱與物種', '上方大字 = AI 取的暱稱；下方小字 = 山海經物種 + 棲位。',
+                  icon: Icons.label),
+              HelpEntry('⚔ 攻擊 / ♥ 血量', '戰鬥用基礎數值；稀有度越高數值越大。',
+                  icon: Icons.bolt),
+              HelpEntry('鎔鑄規則',
+                  '選 3 張同五行 common 點底部 ★ rare；3 張同五行 rare 點 ★★ legendary。',
+                  icon: Icons.local_fire_department),
+              HelpEntry('種 3 common（測試）',
+                  '右上角測試按鈕：免寫作快速生 3 張累+water common 進倉，方便 demo 鎔鑄。',
+                  icon: Icons.science),
+            ]),
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),

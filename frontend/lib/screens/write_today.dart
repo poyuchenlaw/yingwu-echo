@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/echo_client.dart';
 import '../main.dart';
 import '../theme/echo_theme.dart';
+import '../widgets/help_sheet.dart';
 
 const _emotions = ['累', '想哭', '火大', '好像懂了', '平', '煩', '爽', '開心', '莫名', '想睡'];
 
@@ -49,7 +50,7 @@ class _WriteTodayState extends ConsumerState<WriteTodayScreen> {
     } on DuplicateWritingException catch (e) {
       setState(() => _status = '⚠ ${e.toString()}');
     } catch (e) {
-      setState(() => _status = '❌ $e');
+      setState(() => _status = '❌ ${friendlyError(e)}');
     } finally {
       setState(() => _loading = false);
     }
@@ -58,7 +59,31 @@ class _WriteTodayState extends ConsumerState<WriteTodayScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('今日書寫')),
+      appBar: AppBar(
+        title: const Text('今日書寫'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: '書寫說明',
+            onPressed: () => showHelpSheet(context, title: '今日書寫 · 使用方式', entries: const [
+              HelpEntry('文字框', '寫你今天的感受，越具體（場景、人、身體感覺）AI 越能精準對映五行。',
+                  icon: Icons.edit),
+              HelpEntry('情緒標籤', '10 選 1，告訴 AI 你今天的情緒主軸。同情緒不同寫法會生不同共鳴體。',
+                  icon: Icons.psychology),
+              HelpEntry('應物', '送出後 Gemini Flash 後台分析（約 20-30 秒），不阻塞 UI。',
+                  icon: Icons.send),
+              HelpEntry('五行 / 九曜', '系統判斷你文字的能量屬性，影響共鳴體屬性與戰鬥相剋。',
+                  icon: Icons.public),
+              HelpEntry('真誠度',
+                  '0-100%；AI 評估文字情感深度與一致性。越高代表你寫的越「真」，未來會影響收編加成。',
+                  icon: Icons.favorite),
+              HelpEntry('共鳴體 quote',
+                  '為你今天的書寫生成的一段台詞，是這隻怪物的個性簽名。',
+                  icon: Icons.format_quote),
+            ]),
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

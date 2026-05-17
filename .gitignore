@@ -14,7 +14,19 @@
 /frontend/build/
 /frontend/.packages
 /frontend/pubspec.lock
-/frontend/android/
+
+# Android: keep scaffold for CI, exclude build outputs + dev-local paths + signing
+/frontend/android/local.properties
+/frontend/android/.gradle/
+/frontend/android/**/build/
+/frontend/android/**/.cxx/
+/frontend/android/key.properties
+/frontend/android/**/*.jks
+/frontend/android/**/*.keystore
+/frontend/android/app/release/
+/frontend/android/*.iml
+
+# Flutter scaffolds for other platforms (unused)
 /frontend/ios/
 /frontend/linux/
 /frontend/macos/
