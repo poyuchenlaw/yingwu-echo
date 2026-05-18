@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -47,45 +48,12 @@ func main() {
 		defer db.Close()
 	}
 	rdb := openRedis(redisURL)
-	worker, llm := startAnalyzerWorker(rdb, geminiKey)
-	demoLLM = llm
 
 	handler := api.NewHandler(db, rdb)
+	worker, llm := startAnalyzerWorker(rdb, geminiKey, db, handler)
+	demoLLM = llm
 	if db != nil {
-		handler.SetAnalyzer(func(ctx context.Context, writingID, playerID, content, emotionTag string) {
-			if demoLLM == nil {
-				log.Printf("analyzer-cb: no LLM, marking %s FAILED", writingID)
-				_ = handler.MarkWritingFailed(ctx, writingID, "no_llm")
-				return
-			}
-			res, err := demoLLM.Analyze(ctx, analyzer.AnalysisRequest{
-				WritingID: writingID, Content: content, EmotionTag: emotionTag,
-			})
-			if err != nil {
-				log.Printf("analyzer-cb: LLM error for %s: %v — falling back to heuristic", writingID, err)
-				fb := analyzer.FallbackAnalyze(emotionTag)
-				// Heuristic returns CN celestial like 海王 — translate to 海王星
-				cel := fb.CelestialDetected
-				if cel == "海王" { cel = "海王星" }
-				if cel == "天王" { cel = "天王星" }
-				if uerr := handler.UpdateWritingAnalysis(ctx, writingID, fb.WuxingDetected, cel, "未知共鳴體", "（fallback：靜待 AI 重連）", 0.5); uerr != nil {
-					log.Printf("analyzer-cb: fallback update failed: %v", uerr)
-				}
-				return
-			}
-			if uerr := handler.UpdateWritingAnalysis(ctx, writingID, res.WuxingDetected, res.CelestialDetected, res.MonsterName, res.CardQuote, res.ValidityScore); uerr != nil {
-				log.Printf("analyzer-cb: update %s failed: %v", writingID, uerr)
-			}
-			wuxingEN := api.WuxingCNtoEN[res.WuxingDetected]
-			if wuxingEN == "" {
-				wuxingEN = "earth"
-			}
-			if mid, merr := handler.AcquireMonsterForWriting(ctx, playerID, emotionTag, wuxingEN, res.MonsterName); merr != nil {
-				log.Printf("analyzer-cb: acquire monster failed for %s: %v", writingID, merr)
-			} else if mid != "" {
-				log.Printf("analyzer-cb: acquired monster %s for writing %s", mid, writingID)
-			}
-		})
+		handler.SetAnalyzer(buildAnalyzerCallback(rdb, handler))
 		log.Printf("analyzer callback wired to handler (db-mode)")
 	}
 	r := gin.Default()
@@ -231,7 +199,7 @@ func openRedis(redisURL string) *redis.Client {
 	return rdb
 }
 
-func startAnalyzerWorker(rdb *redis.Client, geminiKey string) (*analyzer.Worker, analyzer.LLMClient) {
+func startAnalyzerWorker(rdb *redis.Client, geminiKey string, db *sql.DB, h *api.Handler) (*analyzer.Worker, analyzer.LLMClient) {
 	var llm analyzer.LLMClient
 	if geminiKey != "" {
 		gc, err := analyzer.NewGeminiClient(geminiKey, "", 45*time.Second)
@@ -249,10 +217,85 @@ func startAnalyzerWorker(rdb *redis.Client, geminiKey string) (*analyzer.Worker,
 	if rdb == nil {
 		return nil, llm
 	}
-	w := analyzer.NewWorker(rdb, llm, nil)
+	var persistFn analyzer.PersistFn
+	var acquireFn analyzer.AcquireFn
+	if db != nil && h != nil {
+		persistFn = func(ctx context.Context, writingID, wuxingCN, celestial, monsterName, cardQuote string, validity float64) error {
+			return h.UpdateWritingAnalysis(ctx, writingID, wuxingCN, celestial, monsterName, cardQuote, validity)
+		}
+		acquireFn = func(ctx context.Context, playerID, emotionTag, wuxingCN, monsterName string) (string, error) {
+			wuxingEN := api.WuxingCNtoEN[wuxingCN]
+			if wuxingEN == "" {
+				wuxingEN = "earth"
+			}
+			return h.AcquireMonsterForWriting(ctx, playerID, emotionTag, wuxingEN, monsterName)
+		}
+	}
+	w := analyzer.NewWorker(rdb, llm, nil, persistFn, acquireFn)
 	w.Start()
 	log.Printf("analyzer worker started (pool=%d)", analyzer.WorkerCount)
 	return w, llm
+}
+
+// buildAnalyzerCallback constructs the AnalyzerFn used by handler.SetAnalyzer.
+// If rdb != nil, it pushes a WritingTask to Redis (worker pool handles persist+acquire).
+// Otherwise it falls back to inline analysis and DB writes via the handler.
+func buildAnalyzerCallback(rdb *redis.Client, h *api.Handler) api.AnalyzerFn {
+	return func(ctx context.Context, writingID, playerID, content, emotionTag string) {
+		if rdb != nil {
+			task := analyzer.WritingTask{
+				WritingID:  writingID,
+				PlayerID:   playerID,
+				Content:    content,
+				EmotionTag: emotionTag,
+			}
+			payload, err := json.Marshal(task)
+			if err != nil {
+				log.Printf("analyzer-cb: marshal %s: %v", writingID, err)
+				return
+			}
+			if err := rdb.RPush(ctx, analyzer.RedisQueueKey, payload).Err(); err != nil {
+				log.Printf("analyzer-cb: rpush %s: %v", writingID, err)
+			}
+			return
+		}
+		// Inline fallback — no Redis available.
+		if demoLLM == nil {
+			log.Printf("analyzer-cb: no LLM, marking %s FAILED", writingID)
+			_ = h.MarkWritingFailed(ctx, writingID, "no_llm")
+			return
+		}
+		res, err := demoLLM.Analyze(ctx, analyzer.AnalysisRequest{
+			WritingID: writingID, Content: content, EmotionTag: emotionTag,
+		})
+		if err != nil {
+			log.Printf("analyzer-cb: LLM error %s: %v — heuristic fallback", writingID, err)
+			fb := analyzer.FallbackAnalyze(emotionTag)
+			cel := fb.CelestialDetected
+			if cel == "海王" {
+				cel = "海王星"
+			}
+			if cel == "天王" {
+				cel = "天王星"
+			}
+			if uerr := h.UpdateWritingAnalysis(ctx, writingID, fb.WuxingDetected, cel, "未知共鳴體", "（fallback：靜待 AI 重連）", 0.5); uerr != nil {
+				log.Printf("analyzer-cb: fallback update failed: %v", uerr)
+			}
+			return
+		}
+		if uerr := h.UpdateWritingAnalysis(ctx, writingID, res.WuxingDetected, res.CelestialDetected, res.MonsterName, res.CardQuote, res.ValidityScore); uerr != nil {
+			log.Printf("analyzer-cb: update %s failed: %v", writingID, uerr)
+		}
+		wuxingEN := api.WuxingCNtoEN[res.WuxingDetected]
+		if wuxingEN == "" {
+			wuxingEN = "earth"
+		}
+		if mid, merr := h.AcquireMonsterForWriting(ctx, playerID, emotionTag, wuxingEN, res.MonsterName); merr != nil {
+			log.Printf("analyzer-cb: acquire monster failed %s: %v", writingID, merr)
+		} else if mid != "" {
+			log.Printf("analyzer-cb: acquired monster %s for writing %s", mid, writingID)
+		}
+	}
 }
 
 func getenv(k, def string) string {

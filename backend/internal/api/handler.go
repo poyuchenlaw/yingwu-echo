@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -152,16 +151,10 @@ func (h *Handler) PostWriting(c *gin.Context) {
 		}
 	}
 
-	if h.redis != nil {
-		task := map[string]interface{}{
-			"writing_id":  writingID,
-			"content":     req.Content,
-			"emotion_tag": req.EmotionTag,
-			"created_at":  time.Now().UTC().Format(time.RFC3339),
-		}
-		payload, _ := json.Marshal(task)
-		_ = h.redis.RPush(c.Request.Context(), "writing_analysis_queue", payload)
-	}
+	// v0.6.3: stale bare RPush block removed — buildAnalyzerCallback (main.go)
+	// now owns the queue push and includes player_id in the WritingTask payload.
+	// The old block here used a different schema (no player_id) and caused
+	// double-push + silent monster-acquisition skip on the phantom task.
 
 	c.JSON(http.StatusAccepted, WritingResponse{
 		WritingID: writingID,
