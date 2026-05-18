@@ -1,6 +1,6 @@
 name: yingwu_echo
 description: 應物 ECHO — Soul Writing Monster Collector
-version: 0.6.2+11
+version: 0.6.5+19
 publish_to: none
 
 environment:
