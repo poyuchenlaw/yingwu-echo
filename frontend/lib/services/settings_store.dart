@@ -9,7 +9,7 @@ class SettingsStore {
 
   static const String compiledDefault = String.fromEnvironment(
     'API_BASE',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'https://yingwu.kuangshin.tw',
   );
 
   static Future<SettingsStore> load() async {

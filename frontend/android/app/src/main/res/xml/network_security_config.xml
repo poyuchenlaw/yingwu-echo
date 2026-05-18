@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext (HTTP) for dev / Tailscale tailnet ranges + emulator loopback.
+         Production endpoints should use HTTPS and remove these exceptions. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Android emulator host loopback -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <!-- Local loopback (USB / port forward) -->
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <!-- Tailscale tailnet (100.64.0.0/10) — common public dev addresses -->
+        <domain includeSubdomains="true">100.84.86.128</domain>
+        <!-- Common LAN ranges (RFC1918). Cover only what the app realistically uses. -->
+        <domain includeSubdomains="true">192.168.0.0</domain>
+        <domain includeSubdomains="true">192.168.1.0</domain>
+        <domain includeSubdomains="true">192.168.31.0</domain>
+    </domain-config>
+    <!-- Default: HTTPS only. Cleartext is allowed ONLY for the dev/LAN domains
+         enumerated above. Live API endpoint (yingwu.kuangshin.tw) is HTTPS. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>

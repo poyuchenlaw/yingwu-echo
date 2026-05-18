@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/echo_client.dart';
+import '../api/sprite_resolver.dart';
 import '../main.dart';
+import '../services/local_journal.dart';
 import '../theme/echo_theme.dart';
 import '../widgets/help_sheet.dart';
 
@@ -43,6 +46,24 @@ class _WriteTodayState extends ConsumerState<WriteTodayScreen> {
       final id = await client.postWriting(content: _controller.text, emotionTag: _emotion!);
       setState(() => _status = '後台 Gemini Flash 分析中（約 20-30 秒）…');
       final analysis = await client.pollAnalysis(id);
+      // Mirror into local journal so it shows up immediately even if backend
+      // drops afterwards. Best-effort — failure does not affect user flow.
+      try {
+        await LocalJournal.instance.upsert(JournalEntry(
+          id: id,
+          content: _controller.text,
+          emotionTag: _emotion!,
+          locationAlias: '',
+          wuxingDetected: analysis['wuxing_detected'] as String? ?? '',
+          celestialDetected: analysis['celestial_detected'] as String? ?? '',
+          monsterName: analysis['monster_name'] as String? ?? '',
+          cardQuote: analysis['card_quote'] as String? ?? '',
+          validityScore: (analysis['validity_score'] as num?)?.toDouble() ?? 0.0,
+          status: 'COMPLETE',
+          writtenAt: DateTime.now(),
+          analyzedAt: DateTime.now(),
+        ));
+      } catch (_) {}
       setState(() {
         _result = analysis;
         _status = '完成';
@@ -117,9 +138,13 @@ class _WriteTodayState extends ConsumerState<WriteTodayScreen> {
               }).toList(),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loading ? null : _submit,
-              child: Text(_loading ? '分析中…' : '應物'),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _loading ? null : _submit,
+                icon: Icon(_loading ? Icons.hourglass_top : Icons.auto_awesome, size: 18),
+                label: Text(_loading ? '應物中…' : '應  物'),
+              ),
             ),
             const SizedBox(height: 14),
             if (_status.isNotEmpty)
@@ -140,61 +165,98 @@ class _ResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final w = r['wuxing_detected'] as String? ?? '';
     final v = (r['validity_score'] as num?)?.toDouble() ?? 0.0;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: EchoColors.panel,
-        border: Border.all(color: EchoColors.border),
-        borderRadius: BorderRadius.circular(8),
-      ),
+    final name = r['monster_name'] as String? ?? '—';
+    final spritePath = (name.isNotEmpty && name != '—')
+        ? SpriteResolver.instance.pathSync(name, 'common')
+        : null;
+    return EchoCard(
+      glow: true,
+      glowColor: EchoColors.accent,
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Text('五行 ', style: TextStyle(color: EchoColors.muted)),
-            if (w.isNotEmpty) WuxingBadge(w),
-            const SizedBox(width: 16),
-            Text('九曜 ${r["celestial_detected"] ?? "—"}',
-                style: const TextStyle(color: EchoColors.fg)),
-          ]),
-          const SizedBox(height: 10),
-          Text('共鳴體 · ${r["monster_name"] ?? "—"}',
-              style: const TextStyle(color: EchoColors.accent, fontSize: 22)),
-          const SizedBox(height: 12),
-          Row(children: [
-            const Text('真誠度 ', style: TextStyle(color: EchoColors.muted)),
-            const SizedBox(width: 8),
+            const EchoSeal(text: '應\n物', size: 38),
+            const SizedBox(width: 14),
             Expanded(
-              child: LinearProgressIndicator(
-                value: v,
-                backgroundColor: EchoColors.bg,
-                color: EchoColors.accent,
-                minHeight: 8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('共鳴體', style: echoMono(11, color: EchoColors.muted)),
+                  const SizedBox(height: 2),
+                  Text(name, style: echoDisplay(24, letterSpacing: 6)),
+                ],
               ),
             ),
-            const SizedBox(width: 8),
-            Text('${(v * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(color: EchoColors.muted, fontSize: 12)),
           ]),
+          const SizedBox(height: 18),
+          if (spritePath != null)
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.asset(
+                  spritePath,
+                  width: 220, height: 220, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox(
+                    width: 220, height: 220,
+                    child: Icon(Icons.auto_awesome, color: EchoColors.accent, size: 60),
+                  ),
+                ),
+              )
+                  .animate()
+                  .fadeIn(duration: 800.ms)
+                  .scale(begin: const Offset(0.85, 0.85), duration: 700.ms, curve: Curves.easeOut),
+            ),
+          const SizedBox(height: 18),
+          Row(children: [
+            if (w.isNotEmpty) WuxingBadge(w, size: 24),
+            const SizedBox(width: 12),
+            Text('九曜 · ${r["celestial_detected"] ?? "—"}',
+                style: echoTitle(13, color: EchoColors.fgSoft, letterSpacing: 2)),
+          ]),
+          const SizedBox(height: 16),
+          Row(children: [
+            Text('真誠度', style: echoMono(11, color: EchoColors.muted)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: v,
+                  backgroundColor: EchoColors.bgSoft,
+                  valueColor: const AlwaysStoppedAnimation(EchoColors.accent),
+                  minHeight: 7,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text('${(v * 100).toStringAsFixed(0)}%',
+                style: echoTitle(13, color: EchoColors.accent, letterSpacing: 1)),
+          ]),
+          const SizedBox(height: 20),
+          const EchoDivider(glyph: '✦'),
           const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
             decoration: const BoxDecoration(
               color: EchoColors.bg,
-              border: Border(left: BorderSide(color: EchoColors.accent, width: 3)),
+              border: Border(left: BorderSide(color: EchoColors.accent, width: 2)),
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(4),
+                bottomRight: Radius.circular(4),
+              ),
             ),
             child: Text(
               r['card_quote'] as String? ?? '',
-              style: const TextStyle(
+              style: echoBody(15, height: 1.85).copyWith(
                 fontStyle: FontStyle.italic,
                 color: EchoColors.fg,
-                fontSize: 15,
-                height: 1.7,
               ),
             ),
           ),
         ],
       ),
-    );
+    ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.06, end: 0, curve: Curves.easeOutCubic);
   }
 }

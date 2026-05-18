@@ -52,7 +52,7 @@ func main() {
 
 	handler := api.NewHandler(db, rdb)
 	if db != nil {
-		handler.SetAnalyzer(func(ctx context.Context, writingID, content, emotionTag string) {
+		handler.SetAnalyzer(func(ctx context.Context, writingID, playerID, content, emotionTag string) {
 			if demoLLM == nil {
 				log.Printf("analyzer-cb: no LLM, marking %s FAILED", writingID)
 				_ = handler.MarkWritingFailed(ctx, writingID, "no_llm")
@@ -80,7 +80,7 @@ func main() {
 			if wuxingEN == "" {
 				wuxingEN = "earth"
 			}
-			if mid, merr := handler.AcquireMonsterForWriting(ctx, api.DefaultPlayerID, emotionTag, wuxingEN, res.MonsterName); merr != nil {
+			if mid, merr := handler.AcquireMonsterForWriting(ctx, playerID, emotionTag, wuxingEN, res.MonsterName); merr != nil {
 				log.Printf("analyzer-cb: acquire monster failed for %s: %v", writingID, merr)
 			} else if mid != "" {
 				log.Printf("analyzer-cb: acquired monster %s for writing %s", mid, writingID)

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -46,10 +47,39 @@ type AnalysisResponse struct {
 
 // AnalyzerFn is invoked asynchronously after a writing is inserted (v0.5 demo path).
 // It receives the writing id, full content, and emotion tag; updates DB on completion.
-type AnalyzerFn func(ctx context.Context, writingID, content, emotionTag string)
+type AnalyzerFn func(ctx context.Context, writingID, playerID, content, emotionTag string)
 
 // DefaultPlayerID is used when no auth/session layer exists (v0.5).
 const DefaultPlayerID = "00000000-0000-0000-0000-000000000001"
+
+// playerIDFromHeader returns a valid UUID from X-Player-Id, or DefaultPlayerID
+// if the header is missing or malformed (back-compat with v0.5 clients).
+func playerIDFromHeader(c *gin.Context) string {
+	raw := strings.TrimSpace(c.GetHeader("X-Player-Id"))
+	if raw == "" {
+		return DefaultPlayerID
+	}
+	if _, err := uuid.Parse(raw); err != nil {
+		return DefaultPlayerID
+	}
+	return raw
+}
+
+// WritingListItem represents one row in GET /api/v1/writings list response.
+type WritingListItem struct {
+	ID                string  `json:"id"`
+	Content           string  `json:"content"`
+	EmotionTag        string  `json:"emotion_tag"`
+	LocationAlias     string  `json:"location_alias"`
+	WuxingDetected    string  `json:"wuxing_detected"`
+	CelestialDetected string  `json:"celestial_detected"`
+	MonsterName       string  `json:"monster_name"`
+	CardQuote         string  `json:"card_quote"`
+	ValidityScore     float64 `json:"validity_score"`
+	Status            string  `json:"status"`
+	WrittenAt         string  `json:"written_at"`
+	AnalyzedAt        string  `json:"analyzed_at,omitempty"`
+}
 
 // Handler holds dependencies for the writing API endpoints.
 type Handler struct {
@@ -80,6 +110,8 @@ func (h *Handler) PostWriting(c *gin.Context) {
 	}
 	writingID := uuid.New().String()
 
+	playerID := playerIDFromHeader(c)
+
 	if h.db != nil {
 		hash := sha256.Sum256([]byte(req.Content))
 		charCount := req.WordCount
@@ -88,9 +120,9 @@ func (h *Handler) PostWriting(c *gin.Context) {
 		}
 		_, err := h.db.ExecContext(c.Request.Context(),
 			`INSERT INTO player_writings
-			 (id, player_id, content, content_hash, char_count, emotion_tag, scene_tag, status)
+			 (id, player_id, content, content_hash, char_count, emotion_tag, location_alias, status)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending_analysis')`,
-			writingID, DefaultPlayerID, req.Content, hex.EncodeToString(hash[:]),
+			writingID, playerID, req.Content, hex.EncodeToString(hash[:]),
 			charCount, req.EmotionTag, req.LocationAlias)
 		if err != nil {
 			// Detect unique-violation on content_hash (dedup protection)
@@ -98,7 +130,7 @@ func (h *Handler) PostWriting(c *gin.Context) {
 				var existingID string
 				if e := h.db.QueryRowContext(c.Request.Context(),
 					`SELECT id FROM player_writings WHERE player_id=$1 AND content_hash=$2 LIMIT 1`,
-					DefaultPlayerID, hex.EncodeToString(hash[:])).Scan(&existingID); e == nil {
+					playerID, hex.EncodeToString(hash[:])).Scan(&existingID); e == nil {
 					c.JSON(http.StatusConflict, gin.H{
 						"error":      "duplicate writing (same content already submitted)",
 						"writing_id": existingID,
@@ -113,7 +145,7 @@ func (h *Handler) PostWriting(c *gin.Context) {
 			go func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 				defer cancel()
-				h.analyzer(ctx, writingID, req.Content, req.EmotionTag)
+				h.analyzer(ctx, writingID, playerID, req.Content, req.EmotionTag)
 			}()
 		} else {
 			log.Printf("PostWriting: analyzer not set, row %s stays pending_analysis", writingID)
@@ -193,12 +225,73 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 	v1 := r.Group("/api/v1")
 	{
 		v1.POST("/writings", h.PostWriting)
+		v1.GET("/writings", h.GetWritings)
 		v1.GET("/writings/:id/analysis", h.GetWritingAnalysis)
 		v1.GET("/monsters", h.GetMonsters)
 		v1.POST("/forge", h.PostForge)
 		v1.POST("/dev/seed-cards", h.DevSeedCards)
 		v1.POST("/battle", h.PostBattle)
 	}
+}
+
+// GetWritings handles GET /api/v1/writings?limit=50&offset=0.
+// Returns a list of writings for the player identified by X-Player-Id header
+// (or DefaultPlayerID if missing), newest first.
+func (h *Handler) GetWritings(c *gin.Context) {
+	if h.db == nil {
+		c.JSON(http.StatusOK, gin.H{"writings": []WritingListItem{}})
+		return
+	}
+	playerID := playerIDFromHeader(c)
+	limit := 50
+	offset := 0
+	if q := c.Query("limit"); q != "" {
+		var v int
+		if _, err := fmt.Sscanf(q, "%d", &v); err == nil && v > 0 && v <= 200 {
+			limit = v
+		}
+	}
+	if q := c.Query("offset"); q != "" {
+		var v int
+		if _, err := fmt.Sscanf(q, "%d", &v); err == nil && v >= 0 {
+			offset = v
+		}
+	}
+	rows, err := h.db.QueryContext(c.Request.Context(),
+		`SELECT id, content, emotion_tag, COALESCE(location_alias, ''),
+		        COALESCE(wuxing_detected::text, ''), COALESCE(celestial_detected, ''),
+		        COALESCE(monster_name, ''), COALESCE(card_quote, ''),
+		        validity_score, status, written_at, analyzed_at
+		 FROM player_writings
+		 WHERE player_id = $1
+		 ORDER BY written_at DESC
+		 LIMIT $2 OFFSET $3`,
+		playerID, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+	out := make([]WritingListItem, 0, limit)
+	for rows.Next() {
+		var (
+			it         WritingListItem
+			writtenAt  time.Time
+			analyzedAt sql.NullTime
+		)
+		if err := rows.Scan(&it.ID, &it.Content, &it.EmotionTag, &it.LocationAlias,
+			&it.WuxingDetected, &it.CelestialDetected, &it.MonsterName, &it.CardQuote,
+			&it.ValidityScore, &it.Status, &writtenAt, &analyzedAt); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		it.WrittenAt = writtenAt.UTC().Format(time.RFC3339)
+		if analyzedAt.Valid {
+			it.AnalyzedAt = analyzedAt.Time.UTC().Format(time.RFC3339)
+		}
+		out = append(out, it)
+	}
+	c.JSON(http.StatusOK, gin.H{"writings": out})
 }
 
 // WuxingCNtoEN maps Chinese wuxing labels to the DB enum values.

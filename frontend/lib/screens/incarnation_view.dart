@@ -213,9 +213,22 @@ class _MonsterCard extends StatelessWidget {
           color: EchoColors.panel,
           border: Border.all(
             color: selected ? EchoColors.accent : EchoColors.border,
-            width: selected ? 2 : 1,
+            width: selected ? 2 : 0.8,
           ),
           borderRadius: BorderRadius.circular(6),
+          boxShadow: [
+            BoxShadow(
+              color: EchoColors.rarity(rarity).withOpacity(rarity == 'legendary' ? 0.35 : (rarity == 'rare' ? 0.22 : 0.0)),
+              blurRadius: rarity == 'legendary' ? 14 : 10,
+              spreadRadius: -2,
+            ),
+            const BoxShadow(
+              color: Color(0xFF000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+              spreadRadius: -4,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -9,18 +9,36 @@ import 'package:http/http.dart' as http;
 
 const String kDefaultBase = String.fromEnvironment(
   'API_BASE',
-  defaultValue: 'http://10.0.2.2:8080',
+  defaultValue: 'https://yingwu.kuangshin.tw',
 );
 
 class EchoClient {
-  EchoClient({String? base}) : base = base ?? kDefaultBase;
+  EchoClient({String? base, this.playerId}) : base = base ?? kDefaultBase;
   final String base;
+  final String? playerId;
 
   Uri _u(String path) => Uri.parse('$base$path');
+
+  Map<String, String> _headers([Map<String, String> extra = const {}]) {
+    final h = <String, String>{...extra};
+    if (playerId != null && playerId!.isNotEmpty) h['X-Player-Id'] = playerId!;
+    return h;
+  }
 
   Future<Map<String, dynamic>> health() async {
     final r = await http.get(_u('/health'));
     return json.decode(r.body) as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> getWritings({int limit = 50, int offset = 0}) async {
+    final r = await http.get(
+      _u('/api/v1/writings?limit=$limit&offset=$offset'),
+      headers: _headers(),
+    );
+    if (r.statusCode != 200) throw Exception('getWritings ${r.statusCode}');
+    final j = json.decode(r.body) as Map<String, dynamic>;
+    final list = j['writings'] as List<dynamic>? ?? const [];
+    return list.cast<Map<String, dynamic>>();
   }
 
   // Demo path — synchronous Gemini, no DB. Returns analysis inline.
@@ -31,7 +49,7 @@ class EchoClient {
     final r = await http
         .post(
           _u('/api/v1/demo/analyze'),
-          headers: {'Content-Type': 'application/json'},
+          headers: _headers({'Content-Type': 'application/json'}),
           body: json.encode({'content': content, 'emotion_tag': emotionTag}),
         )
         .timeout(const Duration(seconds: 60));
@@ -49,7 +67,7 @@ class EchoClient {
   }) async {
     final r = await http.post(
       _u('/api/v1/writings'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers({'Content-Type': 'application/json'}),
       body: json.encode({
         'content': content,
         'emotion_tag': emotionTag,
@@ -72,7 +90,7 @@ class EchoClient {
       {Duration interval = const Duration(seconds: 2), int maxTries = 30}) async {
     for (var i = 0; i < maxTries; i++) {
       await Future<void>.delayed(interval);
-      final r = await http.get(_u('/api/v1/writings/$writingId/analysis'));
+      final r = await http.get(_u('/api/v1/writings/$writingId/analysis'), headers: _headers());
       if (r.statusCode != 200) continue;
       final j = json.decode(r.body) as Map<String, dynamic>;
       final status = j['status'] as String? ?? '';
@@ -83,7 +101,7 @@ class EchoClient {
   }
 
   Future<List<Map<String, dynamic>>> getMonsters() async {
-    final r = await http.get(_u('/api/v1/monsters'));
+    final r = await http.get(_u('/api/v1/monsters'), headers: _headers());
     if (r.statusCode != 200) throw Exception('monsters ${r.statusCode}');
     final j = json.decode(r.body) as Map<String, dynamic>;
     final list = j['monsters'] as List<dynamic>? ?? const [];
@@ -93,7 +111,7 @@ class EchoClient {
   Future<Map<String, dynamic>> battle(String attackerId) async {
     final r = await http.post(
       _u('/api/v1/battle'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers({'Content-Type': 'application/json'}),
       body: json.encode({'attacker_monster_id': attackerId}),
     ).timeout(const Duration(seconds: 30));
     if (r.statusCode != 200) throw Exception('battle ${r.statusCode}: ${r.body}');
@@ -107,7 +125,7 @@ class EchoClient {
   }) async {
     final r = await http.post(
       _u('/api/v1/forge'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers({'Content-Type': 'application/json'}),
       body: json.encode({
         'source_ids': sourceIds,
         'target_rarity': targetRarity,
@@ -131,7 +149,7 @@ class EchoClient {
     String emotion = '累',
     String wuxing = 'water',
   }) async {
-    final r = await http.post(_u('/api/v1/dev/seed-cards?emotion=$emotion&wuxing=$wuxing'));
+    final r = await http.post(_u('/api/v1/dev/seed-cards?emotion=$emotion&wuxing=$wuxing'), headers: _headers());
     if (r.statusCode != 200) throw Exception('seed ${r.statusCode}: ${r.body}');
     final j = json.decode(r.body) as Map<String, dynamic>;
     return ((j['created'] as List<dynamic>?) ?? const []).map((e) => e.toString()).toList();

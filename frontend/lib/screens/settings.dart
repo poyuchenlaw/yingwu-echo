@@ -1,13 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../api/echo_client.dart';
 import '../main.dart';
+import '../services/local_journal.dart';
 import '../services/version_check.dart';
 import '../theme/echo_theme.dart';
 import '../widgets/update_dialog.dart';
 
 const _presets = <String, String>{
-  'Tailscale（實機推薦）': 'http://100.84.86.128:8080',
+  '正式線（推薦）': 'https://yingwu.kuangshin.tw',
+  'Tailscale（內網）': 'http://100.84.86.128:8080',
   'Android 模擬器': 'http://10.0.2.2:8080',
   '本機 localhost': 'http://127.0.0.1:8080',
 };
@@ -135,6 +140,49 @@ class _SettingsState extends ConsumerState<SettingsScreen> {
                 child: Text(_status,
                     style: const TextStyle(color: EchoColors.fg, fontSize: 13, height: 1.5)),
               ),
+            const SizedBox(height: 28),
+            const Divider(color: EchoColors.border),
+            const SizedBox(height: 12),
+            const Text('我的書寫歷程',
+                style: TextStyle(color: EchoColors.accent, fontSize: 14, letterSpacing: 1)),
+            const SizedBox(height: 6),
+            const Text(
+              '所有書寫主要存在後端資料庫，手機本地有完整快取。可隨時匯出 JSON 分享到 Drive / 信箱 / LINE 自己保管。',
+              style: TextStyle(color: EchoColors.muted, fontSize: 12, height: 1.6),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.ios_share, size: 18),
+              label: const Text('匯出書寫歷程 JSON'),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: EchoColors.border),
+                foregroundColor: EchoColors.fg,
+              ),
+              onPressed: () async {
+                final n = await LocalJournal.instance.count();
+                if (n == 0) {
+                  if (!mounted) return;
+                  setState(() => _status = '尚無書寫紀錄可匯出');
+                  return;
+                }
+                setState(() => _status = '匯出中…');
+                final jsonStr = await LocalJournal.instance.exportAllJson();
+                final dir = await getTemporaryDirectory();
+                final ts = DateTime.now()
+                    .toIso8601String()
+                    .replaceAll(':', '')
+                    .substring(0, 15);
+                final f = File('${dir.path}/yingwu-journal-$ts.json');
+                await f.writeAsString(jsonStr);
+                if (!mounted) return;
+                setState(() => _status = '✓ 已產出 $n 篇，請選擇分享目的地');
+                await Share.shareXFiles(
+                  [XFile(f.path, mimeType: 'application/json')],
+                  subject: '應物 ECHO · 書寫歷程',
+                  text: '我在應物 ECHO 累積的 $n 篇書寫歷程',
+                );
+              },
+            ),
             const SizedBox(height: 28),
             const Divider(color: EchoColors.border),
             const SizedBox(height: 12),
