@@ -409,6 +409,10 @@ func (h *Handler) GetMonsters(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"monsters": []MonsterCard{}, "stub_mode": true})
 		return
 	}
+	// v0.6.4: scope by X-Player-Id header (was hardcoded DefaultPlayerID — the
+	// same bug class as v0.6.2 audit B-4, but on the read endpoint. Caused
+	// every player to see an empty collection even after their writing
+	// successfully acquired a monster.)
 	rows, err := h.db.QueryContext(c.Request.Context(),
 		`SELECT pm.id, pm.variant_id, s.name_zh, v.wuxing_attr::text, v.rarity::text,
 		        v.power_base, v.hp_base, v.position::text, pm.nickname, pm.acquired_at
@@ -417,7 +421,7 @@ func (h *Handler) GetMonsters(c *gin.Context) {
 		 JOIN monster_species s ON s.id=v.species_id
 		 WHERE pm.player_id=$1 AND pm.is_active=true
 		 ORDER BY pm.acquired_at DESC LIMIT 100`,
-		DefaultPlayerID)
+		playerIDFromHeader(c))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -70,8 +70,8 @@ func TestRetryWithFallback_MockSuccess(t *testing.T) {
 	if usedFallback {
 		t.Error("MockLLMClient should not trigger fallback")
 	}
-	if result.WuxingDetected != "fire" {
-		t.Errorf("expected fire, got %s", result.WuxingDetected)
+	if result.WuxingDetected != "火" {
+		t.Errorf("expected 火, got %s", result.WuxingDetected)
 	}
 }
 

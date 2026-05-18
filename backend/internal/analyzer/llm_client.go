@@ -28,9 +28,13 @@ type LLMClient interface {
 // TODO: replace with GeminiClient when API key is configured.
 type MockLLMClient struct{}
 
+// v0.6.4: WuxingDetected returns CN ("火") to match Gemini live output and
+// what UpdateWritingAnalysis/AcquireMonsterForWriting expect (WuxingCNtoEN
+// map keys are CN). Prior "fire" EN value caused silent fallback to "earth"
+// across all writings — invisible in mock dev runs.
 func (m *MockLLMClient) Analyze(_ context.Context, _ AnalysisRequest) (AnalysisResult, error) {
 	return AnalysisResult{
-		WuxingDetected:    "fire",
+		WuxingDetected:    "火",
 		CelestialDetected: "太陽",
 		CardQuote:         "mock card quote",
 		MonsterName:       "mock monster",
