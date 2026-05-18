@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"fmt"
 	"sync"
 	"time"
 
@@ -36,25 +37,27 @@ type ForgeHook func(writingID string, wuxing string, celestial string)
 
 // Worker manages a pool of goroutines that consume from the Redis analysis queue.
 type Worker struct {
-	redis   *redis.Client
-	client  LLMClient
-	hook    ForgeHook
-	persist PersistFn
-	acquire AcquireFn
-	stopCh  chan struct{}
-	wg      sync.WaitGroup
+	redis     *redis.Client
+	client    LLMClient
+	hook      ForgeHook
+	persist   PersistFn
+	acquire   AcquireFn
+	OnFailure func(kind, severity, target, errMsg string, ctx map[string]any)
+	stopCh    chan struct{}
+	wg        sync.WaitGroup
 }
 
 // NewWorker creates a Worker. redisClient and llm must not be nil.
 // persist and acquire may be nil (worker operates in reduced-capability mode).
-func NewWorker(redisClient *redis.Client, llm LLMClient, hook ForgeHook, persist PersistFn, acquire AcquireFn) *Worker {
+func NewWorker(redisClient *redis.Client, llm LLMClient, hook ForgeHook, persist PersistFn, acquire AcquireFn, onFailure func(kind, severity, target, errMsg string, ctx map[string]any)) *Worker {
 	return &Worker{
-		redis:   redisClient,
-		client:  llm,
-		hook:    hook,
-		persist: persist,
-		acquire: acquire,
-		stopCh:  make(chan struct{}),
+		redis:     redisClient,
+		client:    llm,
+		hook:      hook,
+		persist:   persist,
+		acquire:   acquire,
+		OnFailure: onFailure,
+		stopCh:    make(chan struct{}),
 	}
 }
 
@@ -79,6 +82,51 @@ func (w *Worker) Stop() {
 	w.wg.Wait()
 }
 
+func (w *Worker) reportFailure(kind, severity, target, errMsg string, ctx map[string]any) {
+	if w.OnFailure != nil {
+		w.OnFailure(kind, severity, target, errMsg, ctx)
+	}
+}
+
+func (w *Worker) processTask(task WritingTask) {
+	defer func() {
+		if r := recover(); r != nil {
+			w.reportFailure("goroutine_panic", "P0", task.WritingID, fmt.Sprintf("%v", r), nil)
+		}
+	}()
+	analyzeCtx, analyzeCancel := context.WithTimeout(context.Background(), 25*time.Second)
+	result, usedFallback, _ := RetryWithFallback(analyzeCtx, w.client, AnalysisRequest{
+		WritingID:  task.WritingID,
+		Content:    task.Content,
+		EmotionTag: task.EmotionTag,
+	})
+	analyzeCancel()
+	log.Printf("analyzer worker: id=%s wuxing=%s celestial=%s fallback=%v",
+		task.WritingID, result.WuxingDetected, result.CelestialDetected, usedFallback)
+	if w.persist != nil {
+		persistCtx, persistCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if err := w.persist(persistCtx, task.WritingID, result.WuxingDetected, result.CelestialDetected, result.MonsterName, result.CardQuote, result.ValidityScore); err != nil {
+			log.Printf("analyzer worker: persist error for %s: %v", task.WritingID, err)
+			w.reportFailure("persist_failure", "P0", task.WritingID, err.Error(), map[string]any{"player_id": task.PlayerID})
+		}
+		persistCancel()
+	}
+	if w.acquire != nil && task.PlayerID != "" {
+		acquireCtx, acquireCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		mid, err := w.acquire(acquireCtx, task.PlayerID, task.EmotionTag, result.WuxingDetected, result.MonsterName)
+		if err != nil {
+			log.Printf("analyzer worker: acquire error for %s: %v", task.WritingID, err)
+			w.reportFailure("acquire_failure", "P0", task.WritingID, err.Error(), map[string]any{"player_id": task.PlayerID})
+		} else if mid != "" {
+			log.Printf("analyzer worker: acquired monster %s for writing %s", mid, task.WritingID)
+		}
+		acquireCancel()
+	}
+	if w.hook != nil {
+		w.hook(task.WritingID, result.WuxingDetected, result.CelestialDetected)
+	}
+}
+
 func (w *Worker) loop() {
 	defer w.wg.Done()
 	for {
@@ -100,35 +148,7 @@ func (w *Worker) loop() {
 				log.Printf("analyzer worker: unmarshal error: %v", err)
 				continue
 			}
-			analyzeCtx, analyzeCancel := context.WithTimeout(context.Background(), 25*time.Second)
-			result, usedFallback, _ := RetryWithFallback(analyzeCtx, w.client, AnalysisRequest{
-				WritingID:  task.WritingID,
-				Content:    task.Content,
-				EmotionTag: task.EmotionTag,
-			})
-			analyzeCancel()
-			log.Printf("analyzer worker: id=%s wuxing=%s celestial=%s fallback=%v",
-				task.WritingID, result.WuxingDetected, result.CelestialDetected, usedFallback)
-			if w.persist != nil {
-				persistCtx, persistCancel := context.WithTimeout(context.Background(), 10*time.Second)
-				if err := w.persist(persistCtx, task.WritingID, result.WuxingDetected, result.CelestialDetected, result.MonsterName, result.CardQuote, result.ValidityScore); err != nil {
-					log.Printf("analyzer worker: persist error for %s: %v", task.WritingID, err)
-				}
-				persistCancel()
-			}
-			if w.acquire != nil && task.PlayerID != "" {
-				acquireCtx, acquireCancel := context.WithTimeout(context.Background(), 10*time.Second)
-				mid, err := w.acquire(acquireCtx, task.PlayerID, task.EmotionTag, result.WuxingDetected, result.MonsterName)
-				if err != nil {
-					log.Printf("analyzer worker: acquire error for %s: %v", task.WritingID, err)
-				} else if mid != "" {
-					log.Printf("analyzer worker: acquired monster %s for writing %s", mid, task.WritingID)
-				}
-				acquireCancel()
-			}
-			if w.hook != nil {
-				w.hook(task.WritingID, result.WuxingDetected, result.CelestialDetected)
-			}
+			w.processTask(task)
 		}
 	}
 }

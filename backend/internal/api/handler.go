@@ -31,17 +31,19 @@ type WritingRequest struct {
 
 // WritingResponse is the 202 response for POST /api/v1/writings.
 type WritingResponse struct {
-	WritingID string `json:"writing_id"`
-	Status    string `json:"status"`
+	WritingID string   `json:"writing_id"`
+	Status    string   `json:"status"`
+	Warnings  []string `json:"warnings,omitempty"`
 }
 
 // AnalysisResponse is the response for GET /api/v1/writings/:id/analysis.
 type AnalysisResponse struct {
-	Status            string  `json:"status"`
-	WuxingDetected    string  `json:"wuxing_detected"`
-	CelestialDetected string  `json:"celestial_detected"`
-	MonsterName       *string `json:"monster_name,omitempty"`
-	CardQuote         *string `json:"card_quote,omitempty"`
+	Status            string   `json:"status"`
+	WuxingDetected    string   `json:"wuxing_detected"`
+	CelestialDetected string   `json:"celestial_detected"`
+	MonsterName       *string  `json:"monster_name,omitempty"`
+	CardQuote         *string  `json:"card_quote,omitempty"`
+	Warnings          []string `json:"warnings,omitempty"`
 }
 
 // AnalyzerFn is invoked asynchronously after a writing is inserted (v0.5 demo path).
@@ -142,12 +144,17 @@ func (h *Handler) PostWriting(c *gin.Context) {
 		}
 		if h.analyzer != nil {
 			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Printf("audit_event: kind=goroutine_panic severity=P0 target=%s err=%q", writingID, fmt.Sprintf("%v", r))
+					}
+				}()
 				ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 				defer cancel()
 				h.analyzer(ctx, writingID, playerID, req.Content, req.EmotionTag)
 			}()
 		} else {
-			log.Printf("PostWriting: analyzer not set, row %s stays pending_analysis", writingID)
+			log.Printf("audit_event: kind=no_analyzer severity=P2 target=%s msg=\"analyzer not set, row stays pending_analysis\"", writingID)
 		}
 	}
 
@@ -223,6 +230,7 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		v1.GET("/monsters", h.GetMonsters)
 		v1.POST("/forge", h.PostForge)
 		v1.POST("/dev/seed-cards", h.DevSeedCards)
+		v1.GET("/dev/failures", h.DevGetFailures)
 		v1.POST("/battle", h.PostBattle)
 	}
 }
@@ -302,6 +310,7 @@ func (h *Handler) UpdateWritingAnalysis(ctx context.Context, writingID, wuxingCN
 	wuxingEN, ok := WuxingCNtoEN[wuxingCN]
 	if !ok {
 		wuxingEN = "earth" // safe default for unknown
+		log.Printf("audit_event: kind=wuxing_unknown severity=P1 target=%s ctx={\"received\":%q}", writingID, wuxingCN)
 	}
 	// Clamp validity score to [0,1]
 	if validityScore < 0 {
@@ -582,6 +591,54 @@ func (h *Handler) DevSeedCards(c *gin.Context) {
 	})
 }
 
+// DevGetFailures handles GET /api/v1/dev/failures.
+// Returns the 50 most recent unresolved failure_ledger rows. Dev-only, no auth.
+func (h *Handler) DevGetFailures(c *gin.Context) {
+	if h.db == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "requires DATABASE_URL"})
+		return
+	}
+	rows, err := h.db.QueryContext(c.Request.Context(),
+		`SELECT event_id, event_kind, severity, env, occurred_at,
+		        COALESCE(actor_id::text,''), COALESCE(target_pk,''),
+		        COALESCE(error_code,''), COALESCE(error_msg,''),
+		        COALESCE(context_json::text,'{}'), retry_count
+		 FROM failure_ledger
+		 WHERE resolved_at IS NULL
+		 ORDER BY occurred_at DESC
+		 LIMIT 50`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+	type failureRow struct {
+		EventID     string `json:"event_id"`
+		EventKind   string `json:"event_kind"`
+		Severity    string `json:"severity"`
+		Env         string `json:"env"`
+		OccurredAt  string `json:"occurred_at"`
+		ActorID     string `json:"actor_id,omitempty"`
+		TargetPK    string `json:"target_pk,omitempty"`
+		ErrorCode   string `json:"error_code,omitempty"`
+		ErrorMsg    string `json:"error_msg,omitempty"`
+		ContextJSON string `json:"context_json,omitempty"`
+		RetryCount  int    `json:"retry_count"`
+	}
+	out := []failureRow{}
+	for rows.Next() {
+		var r failureRow
+		var occ time.Time
+		if err := rows.Scan(&r.EventID, &r.EventKind, &r.Severity, &r.Env, &occ,
+			&r.ActorID, &r.TargetPK, &r.ErrorCode, &r.ErrorMsg, &r.ContextJSON, &r.RetryCount); err != nil {
+			continue
+		}
+		r.OccurredAt = occ.UTC().Format(time.RFC3339)
+		out = append(out, r)
+	}
+	c.JSON(http.StatusOK, gin.H{"failures": out, "count": len(out)})
+}
+
 // SystemNPCPlayerID owns wild NPC monsters available for battle.
 const SystemNPCPlayerID = "00000000-0000-0000-0000-FFFFFFFFFFFF"
 
@@ -601,22 +658,22 @@ type BattleRound struct {
 
 // BattleResult is the verbose response of POST /api/v1/battle.
 type BattleResult struct {
-	BattleID            string        `json:"battle_id"`
-	AttackerSpecies     string        `json:"attacker_species"`
-	AttackerWuxing      string        `json:"attacker_wuxing"`
-	DefenderSpecies     string        `json:"defender_species"`
-	DefenderWuxing      string        `json:"defender_wuxing"`
-	DefenderNickname    string        `json:"defender_nickname"`
-	Multiplier          float64       `json:"damage_multiplier"`
-	Rounds              []BattleRound `json:"rounds"`
-	Outcome             string        `json:"outcome"`
-	MirrorWindowOpened  bool          `json:"mirror_window_opened"`
-	ReverseGambit       bool          `json:"reverse_gambit_triggered"`
-	ImprintAttempted    bool          `json:"imprint_attempted"`
-	ImprintSuccess      bool          `json:"imprint_success"`
-	ImprintProbability  float64       `json:"imprint_probability"`
-	CapturedMonsterID   *string       `json:"captured_monster_id,omitempty"`
-	CapturedNickname    *string       `json:"captured_nickname,omitempty"`
+	BattleID           string        `json:"battle_id"`
+	AttackerSpecies    string        `json:"attacker_species"`
+	AttackerWuxing     string        `json:"attacker_wuxing"`
+	DefenderSpecies    string        `json:"defender_species"`
+	DefenderWuxing     string        `json:"defender_wuxing"`
+	DefenderNickname   string        `json:"defender_nickname"`
+	Multiplier         float64       `json:"damage_multiplier"`
+	Rounds             []BattleRound `json:"rounds"`
+	Outcome            string        `json:"outcome"`
+	MirrorWindowOpened bool          `json:"mirror_window_opened"`
+	ReverseGambit      bool          `json:"reverse_gambit_triggered"`
+	ImprintAttempted   bool          `json:"imprint_attempted"`
+	ImprintSuccess     bool          `json:"imprint_success"`
+	ImprintProbability float64       `json:"imprint_probability"`
+	CapturedMonsterID  *string       `json:"captured_monster_id,omitempty"`
+	CapturedNickname   *string       `json:"captured_nickname,omitempty"`
 }
 
 // PostBattle handles POST /api/v1/battle. Picks a random NPC defender, runs the

@@ -18,6 +18,7 @@ import (
 
 	"github.com/simonchen/yingwu-echo/backend/internal/analyzer"
 	"github.com/simonchen/yingwu-echo/backend/internal/api"
+	"github.com/simonchen/yingwu-echo/backend/internal/audit"
 )
 
 // demoStore holds inline analyze results keyed by writing_id for stub mode (no DB).
@@ -179,7 +180,27 @@ func openDB(dbURL string) *sql.DB {
 		log.Fatalf("db ping: %v", err)
 	}
 	log.Printf("db connected")
+	verifySchema(db)
 	return db
+}
+
+func verifySchema(db *sql.DB) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := db.ExecContext(ctx, `SELECT 1 FROM player_writings WHERE 1=0`); err != nil {
+		log.Fatalf("schema verification failed (player_writings missing): %v — operator runs psql -f migrations/0001_initial_schema.sql before starting server", err)
+	}
+	if _, err := db.ExecContext(ctx, `SELECT location_alias FROM player_writings WHERE 1=0`); err != nil {
+		log.Fatalf("schema verification failed (location_alias missing): %v — operator runs psql -f migrations/0009_v06_journal_player_id.sql before starting server", err)
+	}
+	var speciesCount int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM monster_species`).Scan(&speciesCount); err != nil {
+		log.Fatalf("schema verification failed (monster_species query): %v — operator runs psql -f migrations/0010_v064_seed_species_and_variants.sql before starting server", err)
+	}
+	if speciesCount == 0 {
+		log.Printf("WARNING: monster_species is empty — AcquireMonsterForWriting will return no rows; run: psql -f migrations/0010_v064_seed_species_and_variants.sql")
+	}
+	log.Printf("schema verified: migration_max=0010 species_count=%d", speciesCount)
 }
 
 func openRedis(redisURL string) *redis.Client {
@@ -231,7 +252,10 @@ func startAnalyzerWorker(rdb *redis.Client, geminiKey string, db *sql.DB, h *api
 			return h.AcquireMonsterForWriting(ctx, playerID, emotionTag, wuxingEN, monsterName)
 		}
 	}
-	w := analyzer.NewWorker(rdb, llm, nil, persistFn, acquireFn)
+	onFailure := func(kind, severity, target, errMsg string, ctx map[string]any) {
+		audit.RecordKind(context.Background(), db, kind, severity, target, errMsg, ctx)
+	}
+	w := analyzer.NewWorker(rdb, llm, nil, persistFn, acquireFn, onFailure)
 	w.Start()
 	log.Printf("analyzer worker started (pool=%d)", analyzer.WorkerCount)
 	return w, llm
