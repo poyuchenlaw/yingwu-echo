@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/simonchen/yingwu-echo/backend/internal/audit"
 	"github.com/simonchen/yingwu-echo/backend/internal/battle"
 	"github.com/simonchen/yingwu-echo/backend/internal/faction"
 	"github.com/simonchen/yingwu-echo/backend/internal/forge"
@@ -147,6 +148,11 @@ func (h *Handler) PostWriting(c *gin.Context) {
 				defer func() {
 					if r := recover(); r != nil {
 						log.Printf("audit_event: kind=goroutine_panic severity=P0 target=%s err=%q", writingID, fmt.Sprintf("%v", r))
+						pCtx, pCancel := context.WithTimeout(context.Background(), 5*time.Second)
+						defer pCancel()
+						if aerr := audit.RecordKind(pCtx, h.db, "goroutine_panic", audit.P0, writingID, fmt.Sprintf("%v", r), nil); aerr != nil {
+						log.Printf("audit_event: ledger write failed kind=goroutine_panic target=%s err=%v", writingID, aerr)
+					}
 					}
 				}()
 				ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
@@ -216,6 +222,22 @@ func (h *Handler) GetWritingAnalysis(c *gin.Context) {
 	if cardQuote.Valid {
 		v := cardQuote.String
 		resp.CardQuote = &v
+	}
+	// Populate warnings from unresolved failure_ledger events for this writing.
+	wRows, wErr := h.db.QueryContext(c.Request.Context(),
+		`SELECT event_kind, severity FROM failure_ledger
+		 WHERE target_pk = $1 AND resolved_at IS NULL
+		 ORDER BY occurred_at DESC LIMIT 10`, id)
+	if wErr != nil {
+		log.Printf("audit_event: kind=warnings_query_error target=%s err=%v", id, wErr)
+	} else {
+		defer wRows.Close()
+		for wRows.Next() {
+			var ek, sev string
+			if scanErr := wRows.Scan(&ek, &sev); scanErr == nil {
+				resp.Warnings = append(resp.Warnings, fmt.Sprintf("%s:%s", sev, ek))
+			}
+		}
 	}
 	c.JSON(http.StatusOK, resp)
 }
@@ -375,7 +397,8 @@ func (h *Handler) AcquireMonsterForWriting(ctx context.Context, playerID, emotio
 		return "", nil
 	}
 	var variantID string
-	// Try precise: species.emotion_tag=$1 AND variant.wuxing_attr=$2
+	fallbackLevel := 0
+	// L1: precise match — species.emotion_tag=$1 AND variant.wuxing_attr=$2
 	err := h.db.QueryRowContext(ctx,
 		`SELECT v.id FROM monster_variants v
 		 JOIN monster_species s ON s.id=v.species_id
@@ -383,6 +406,8 @@ func (h *Handler) AcquireMonsterForWriting(ctx context.Context, playerID, emotio
 		 ORDER BY RANDOM() LIMIT 1`,
 		emotionTag, wuxingEN).Scan(&variantID)
 	if err == sql.ErrNoRows {
+		// L2: emotion-only match
+		fallbackLevel = 2
 		err = h.db.QueryRowContext(ctx,
 			`SELECT v.id FROM monster_variants v
 			 JOIN monster_species s ON s.id=v.species_id
@@ -391,6 +416,8 @@ func (h *Handler) AcquireMonsterForWriting(ctx context.Context, playerID, emotio
 			emotionTag).Scan(&variantID)
 	}
 	if err == sql.ErrNoRows {
+		// L3: any random common — both emotion and wuxing unmatched
+		fallbackLevel = 3
 		err = h.db.QueryRowContext(ctx,
 			`SELECT id FROM monster_variants WHERE rarity='common' ORDER BY RANDOM() LIMIT 1`).Scan(&variantID)
 	}
@@ -408,6 +435,13 @@ func (h *Handler) AcquireMonsterForWriting(ctx context.Context, playerID, emotio
 		monsterID, playerID, variantID, nick)
 	if err != nil {
 		return "", err
+	}
+	if fallbackLevel == 3 {
+		msg := "acquired random common variant (emotion+wuxing both unmatched)"
+		log.Printf("audit_event: kind=acquire_fallback_l3 severity=P1 player_id=%s emotion_tag=%s wuxing_en=%s variant_id=%s msg=%q",
+			playerID, emotionTag, wuxingEN, variantID, msg)
+		_ = audit.RecordKind(ctx, h.db, "acquire_fallback_l3", audit.P1, playerID, msg,
+			map[string]any{"emotion_tag": emotionTag, "wuxing_en": wuxingEN, "variant_id": variantID})
 	}
 	return monsterID, nil
 }

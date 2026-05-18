@@ -138,13 +138,38 @@ else
   ok "wuxing_detected=$WUXING"
 fi
 
-# Step 13: failure_ledger scaffold (v0.6.5 杜絕 silent failure gate).
-# Note: AcquireMonsterForWriting has a 3-level fallback (last level picks any
-# random common variant), so we cannot easily trigger a real acquire_failure
-# from the API surface alone. v0.6.5.1 will tighten the fallback policy and
-# add a warning at level-3 hit. For now we verify (a) the table+indexes
-# exist via migration 0011, and (b) the audit.Record path round-trips by
-# inserting one synthetic P2 event and reading it back.
+# Step 13: live force-inject acquire_failure (v0.6.5.1 gate).
+# Truncate monster_variants (FK cascade clears player_monsters), then POST a
+# writing so the worker finds no variants — triggering an acquire_failure P0
+# in the failure_ledger. Re-apply migration 0010 to restore variants after.
+if ! PGPASSWORD=yingwu psql -h localhost -p $PG_PORT -U postgres -d yingwu_echo \
+     -v ON_ERROR_STOP=1 -c "TRUNCATE monster_variants CASCADE" >/tmp/yingwu_truncate.log 2>&1; then
+  fail "step13 TRUNCATE monster_variants failed; subsequent ledger check is meaningless"
+  cat /tmp/yingwu_truncate.log >&2
+fi
+FAIL_WRITING_RESP=$(curl -s -X POST "http://localhost:$SERVER_PORT/api/v1/writings" \
+  -H "Content-Type: application/json" -H "X-Player-Id: $P1" \
+  -d '{"content":"力竭難撐，情緒沉重。","emotion_tag":"累","word_count":8,"location_alias":"e2e-step13"}')
+FAIL_WRITING_ID=$(echo "$FAIL_WRITING_RESP" | grep -oE '"writing_id":"[^"]+' | cut -d'"' -f4)
+[[ -z "$FAIL_WRITING_ID" ]] && { fail "step13 POST writing failed: $FAIL_WRITING_RESP"; }
+sleep 4
+LEDGER_FAIL_COUNT=$(PGPASSWORD=yingwu psql -h localhost -p $PG_PORT -U postgres -d yingwu_echo \
+  -tAc "select count(*) from failure_ledger where event_kind='acquire_failure' and severity='P0'")
+if [[ "${LEDGER_FAIL_COUNT:-0}" -lt 1 ]]; then
+  fail "step13 live acquire_failure: expected >=1 ledger row, got ${LEDGER_FAIL_COUNT:-empty}"
+else
+  ok "step13 live acquire_failure ledger rows=$LEDGER_FAIL_COUNT"
+fi
+# Restore variants via idempotent re-apply of migration 0010, then assert
+# the table is actually non-empty (Auditor 3b: don't trust silent re-apply).
+PGPASSWORD=yingwu psql -h localhost -p $PG_PORT -U postgres -d yingwu_echo \
+  -v ON_ERROR_STOP=1 -f "$REPO_ROOT/migrations/0010_v064_seed_species_and_variants.sql" >/dev/null 2>&1 \
+  || log "migration 0010 re-apply warning (may be a no-op if idempotent guard fires)"
+RESTORE_COUNT=$(PGPASSWORD=yingwu psql -h localhost -p $PG_PORT -U postgres -d yingwu_echo \
+                -tAc "select count(*) from monster_variants")
+[[ "${RESTORE_COUNT:-0}" -lt 25 ]] && fail "step13 monster_variants restore: expected >=25 after 0010 re-apply, got ${RESTORE_COUNT:-empty}"
+
+# Step 14: failure_ledger schema roundtrip (validates table+indexes exist; does not hit server path).
 PGPASSWORD=yingwu psql -h localhost -p $PG_PORT -U postgres -d yingwu_echo -tAc \
   "INSERT INTO failure_ledger (event_kind, severity, target_pk, error_msg) \
    VALUES ('e2e_smoke_synthetic', 'P2', '$WRITING_ID', 'e2e_smoke gate roundtrip')" >/dev/null 2>&1
