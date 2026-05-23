@@ -507,9 +507,9 @@ func (h *Handler) PostForge(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	pid, err := uuid.Parse(DefaultPlayerID)
+	pid, err := uuid.Parse(playerIDFromHeader(c))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "default player id parse: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "player id parse: " + err.Error()})
 		return
 	}
 	srcs := make([]uuid.UUID, 0, len(req.SourceIDs))
@@ -527,7 +527,7 @@ func (h *Handler) PostForge(c *gin.Context) {
 		// derive from player_writings sum
 		_ = h.db.QueryRowContext(c.Request.Context(),
 			`SELECT COALESCE(SUM(char_count),0) FROM player_writings WHERE player_id=$1`,
-			DefaultPlayerID).Scan(&chars)
+			playerIDFromHeader(c)).Scan(&chars)
 	}
 	// Wrap forge in transaction (ADR-002 v2 §2.8): rollback on any failure so
 	// global_legendary_count + player_monsters + forge_records stay consistent.
@@ -546,7 +546,7 @@ func (h *Handler) PostForge(c *gin.Context) {
 			// Per ADR §2.5 refund 80% of materials; v0.6+ snapshot enables
 			// returning the EXACT consumed variants instead of random commons.
 			keep := int(float64(len(capErr.VariantIDs))*0.8 + 0.5)
-			refunded := h.refundExactVariants(c.Request.Context(), capErr.VariantIDs[:keep])
+			refunded := h.refundExactVariants(c.Request.Context(), capErr.VariantIDs[:keep], playerIDFromHeader(c))
 			c.JSON(http.StatusConflict, gin.H{
 				"error":             "legendary cap reached (99 active globally for that species)",
 				"refunded_card_ids": refunded,
@@ -610,7 +610,7 @@ func (h *Handler) DevSeedCards(c *gin.Context) {
 		mid := uuid.New().String()
 		_, err := h.db.ExecContext(c.Request.Context(),
 			`INSERT INTO player_monsters (id, player_id, variant_id) VALUES ($1, $2, $3)`,
-			mid, DefaultPlayerID, v)
+			mid, playerIDFromHeader(c), v)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -732,7 +732,7 @@ func (h *Handler) PostBattle(c *gin.Context) {
 		 JOIN monster_variants v ON v.id=pm.variant_id
 		 JOIN monster_species s ON s.id=v.species_id
 		 WHERE pm.id=$1 AND pm.player_id=$2 AND pm.is_active=true`,
-		req.AttackerMonsterID, DefaultPlayerID).Scan(&attWuxing, &attSpecies, &attPower, &attHP)
+		req.AttackerMonsterID, playerIDFromHeader(c)).Scan(&attWuxing, &attSpecies, &attPower, &attHP)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "attacker monster not found in your collection"})
 		return
@@ -760,9 +760,10 @@ func (h *Handler) PostBattle(c *gin.Context) {
 	}
 
 	// Build engine monsters
+	pid := playerIDFromHeader(c)
 	attUUID, _ := uuid.Parse(req.AttackerMonsterID)
 	defUUID, _ := uuid.Parse(defID)
-	playerUUID, _ := uuid.Parse(DefaultPlayerID)
+	playerUUID, _ := uuid.Parse(pid)
 	npcUUID, _ := uuid.Parse(SystemNPCPlayerID)
 	attMonster := &battle.Monster{
 		ID: attUUID, OwnerID: playerUUID, Wuxing: battle.Wuxing(attWuxing),
@@ -855,7 +856,7 @@ func (h *Handler) PostBattle(c *gin.Context) {
 			_, err := h.db.ExecContext(c.Request.Context(),
 				`INSERT INTO player_monsters (id, player_id, variant_id, nickname, imprinted_from_player_id, lock_state)
 				 VALUES ($1, $2, $3, $4, $5, 'free')`,
-				newMID, DefaultPlayerID, defVariantID, newNick, SystemNPCPlayerID)
+				newMID, pid, defVariantID, newNick, SystemNPCPlayerID)
 			if err == nil {
 				capturedID = &newMID
 				capturedNick = &newNick
@@ -880,7 +881,7 @@ func (h *Handler) PostBattle(c *gin.Context) {
 	_, _ = h.db.ExecContext(c.Request.Context(),
 		`INSERT INTO battles (id, attacker_player_id, defender_player_id, attacker_monster_id, defender_monster_id, state, captured_monster_id, reverse_gambit_triggered, ended_at)
 		 VALUES ($1, $2, $3, $4, $5, $6::battle_state, $7, $8, NOW())`,
-		battleID, DefaultPlayerID, SystemNPCPlayerID, req.AttackerMonsterID, defID, state, capturedMonsterFKValue, session.ReverseTriggered)
+		battleID, pid, SystemNPCPlayerID, req.AttackerMonsterID, defID, state, capturedMonsterFKValue, session.ReverseTriggered)
 
 	c.JSON(http.StatusOK, BattleResult{
 		BattleID:           battleID,
@@ -905,7 +906,7 @@ func (h *Handler) PostBattle(c *gin.Context) {
 // refundForgeMaterials reinserts up to n source cards as fresh player_monsters rows.
 // Used on legendary cap failure to restore 80% of materials per ADR §2.5.
 // Returns the new monster ids that succeeded.
-func (h *Handler) refundForgeMaterials(ctx context.Context, sourceIDs []uuid.UUID, n int) []string {
+func (h *Handler) refundForgeMaterials(ctx context.Context, sourceIDs []uuid.UUID, n int, playerID string) []string {
 	if n > len(sourceIDs) {
 		n = len(sourceIDs)
 	}
@@ -924,7 +925,7 @@ func (h *Handler) refundForgeMaterials(ctx context.Context, sourceIDs []uuid.UUI
 		_, err = h.db.ExecContext(ctx,
 			`INSERT INTO player_monsters (id, player_id, variant_id, nickname)
 			 VALUES ($1, $2, $3, $4)`,
-			mid, DefaultPlayerID, variantID, "退材·forge_cap")
+			mid, playerID, variantID, "退材·forge_cap")
 		if err == nil {
 			out = append(out, mid)
 		}
@@ -935,14 +936,14 @@ func (h *Handler) refundForgeMaterials(ctx context.Context, sourceIDs []uuid.UUI
 // refundExactVariants reinserts player_monsters rows with the exact variant_ids
 // snapshotted before TryForge deleted them (v0.6 enhancement of refundForgeMaterials).
 // Caller passes the slice already truncated to the keep-count.
-func (h *Handler) refundExactVariants(ctx context.Context, variantIDs []uuid.UUID) []string {
+func (h *Handler) refundExactVariants(ctx context.Context, variantIDs []uuid.UUID, playerID string) []string {
 	out := []string{}
 	for _, vid := range variantIDs {
 		mid := uuid.New().String()
 		_, err := h.db.ExecContext(ctx,
 			`INSERT INTO player_monsters (id, player_id, variant_id, nickname)
 			 VALUES ($1, $2, $3, $4)`,
-			mid, DefaultPlayerID, vid.String(), "退材·原 variant")
+			mid, playerID, vid.String(), "退材·原 variant")
 		if err == nil {
 			out = append(out, mid)
 		}
